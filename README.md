@@ -131,6 +131,33 @@ search(function(ctx)
 end)
 ```
 
+### Plugin fallback with priority
+
+```lua
+_G.find_files = keymux.k { "<leader>ff", desc = "Find files" }
+
+-- Try Snacks picker first (highest priority)
+find_files(function()
+  local success = pcall(function()
+    require("snacks").picker.files()
+  end)
+  return success  -- Stop chain if Snacks works
+end, { priority = 200 })
+
+-- Fallback to Telescope
+find_files(function()
+  local success = pcall(function()
+    require("telescope.builtin").find_files()
+  end)
+  return success  -- Stop chain if Telescope works
+end, { priority = 100 })
+
+-- Final fallback if neither plugin exists
+find_files(function()
+  vim.notify("No file picker plugin available", vim.log.levels.ERROR)
+end, { priority = 0 })
+```
+
 ## Debugging
 
 ```vim
@@ -141,7 +168,3 @@ end)
 local info = keymux.inspect("<leader>ff")
 vim.print(info)
 ```
-
-## License
-
-MIT
