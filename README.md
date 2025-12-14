@@ -2,6 +2,12 @@
 
 A keymap multiplexer for Neovim - declare keymaps once, add handlers from anywhere.
 
+## Motivation
+
+- **Separation of concerns**: Sick of tracking keymap strings for each plugin and accidentally overwriting them. This plugin splits keymap declaration from handler assignment.
+- **Multiple handlers**: Want to use multiple handlers for the same keymap with fallback logic.
+- **Enhanced keymaps**: Make keymaps more useful with context sharing, filetype/buffer conditions, priority ordering, wrappers, oneshot execution, and middleware-like behavior.
+
 ## Installation
 
 ```lua
