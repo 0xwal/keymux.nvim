@@ -3,10 +3,59 @@
 A keymap multiplexer for Neovim - declare keymaps once, add handlers from anywhere.
 
 ## Motivation
+- Decouple keymap declaration and handler assignment:
+    I don't want to have the keymap `<lhs>` everywhere, and want easier/simpler API
+    ```lua
+        -- declare keymap
+        _G.keybind_do_x = keymux.k {
+            "<leader>x", -- in once place
+            desc = "a description for the keymap",
+            -- ... other options
+        }
 
-- **Enhanced keymaps**: Make keymaps more useful with context sharing, filetype/buffer conditions, priority ordering, wrappers, oneshot execution, and middleware-like behavior.
-- **Separation of concerns**: Avoid keymap conflicts by separating declaration from handler assignment.
-- **Multiple handlers**: Assign multiple handlers to one keymap with fallback logic.
+        -- assign handlers later anywhere
+        _G.keybind_do_x(function() print("do x") end)
+    ```
+- Register n handlers for a keymap:
+I use two ai completion plugins (codeium, supermaven), why two?  
+    **supermaven**: faster but suggestion quality is mostly ok  
+    **codeium**: slower but suggestion quality is better  
+Neovim doesn't allow multiple handlers for the same keymap, so this plugin enables that.  
+For example, <M-]> triggers supermaven first; if the suggestion isn't good, press <M-]> again for codeium.
+
+- I want to use fewer keymaps and only use them in specific scenarios
+    - `o` is a new line, but I want when in debugging state, I want o to be a step over
+        ```lua
+        _G.debug_o = keymux.k { 
+            "o",
+            desc = "step over",
+            passthrough = function()
+                -- only passthrough when not in debug mode
+                return not vim.g._in_debug;
+            end,
+            condition = function()
+                -- only enable when in debug mode
+                return vim.g._in_debug;
+            end
+        }
+        
+        -- register the handler
+        debug_o(function()
+            vim.cmd("StepOver")
+        end, { name = "debug_o" })
+
+        -- later when exiting debug mode
+        debug_o("CLEAR") -- will clear all keymap and restore `o`
+
+        ```
+    - ``
+
+## Features
+
+- Enhance keymaps with context sharing, filetype/buffer conditions, priority ordering, wrappers, oneshot execution, and middleware-like behavior.
+- Avoid keymap conflicts by separating declaration from handler assignment.
+- Better api and all declaration can be in one place
+- Assign multiple handlers to one keymap with fallback logic.
 
 ## Installation
 
