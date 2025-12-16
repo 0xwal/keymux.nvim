@@ -115,6 +115,7 @@ function M.create(opts)
 			key = key,
 			enabled = true,
 			_registered = true,
+			condition = opts.condition,
 		}
 
 		g_maps[id] = keymap
@@ -138,6 +139,7 @@ function M.create(opts)
 		key = key,
 		enabled = true,
 		_registered = false,
+		condition = opts.condition,
 	}
 
 	g_maps[id] = keymap
@@ -442,7 +444,9 @@ function M.register(keymap_id)
 
 		for _, keymapId in ipairs(keymapIds) do
 			local theKeymap = M.resolve(keymapId)
-			M.invoke(theKeymap, ctx)
+			if not (theKeymap.condition and type(theKeymap.condition) == "function" and not theKeymap.condition()) then
+				M.invoke(theKeymap, ctx)
+			end
 		end
 	end, opts)
 end

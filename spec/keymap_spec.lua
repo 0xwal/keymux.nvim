@@ -868,6 +868,32 @@ describe("keymap", function()
 		assert.equals(0, #M.inspect("ff"))
 		assert.is_not_nil(M.inspect("cc"))
 	end)
+
+	it("#18-1 can conditionally execute based on global variable", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+			condition = function()
+				return vim.g.xyz
+			end,
+		})
+
+		local cb = spy()
+		k(cb)
+
+		vim.g.xyz = true
+		vim.api.nvim_feedkeys("ff", "x", false)
+		assert.spy(cb).was_called(1)
+		cb:clear()
+
+		vim.g.xyz = false
+		vim.api.nvim_feedkeys("ff", "x", false)
+		assert.spy(cb).was_called(0)
+
+		vim.g.xyz = true
+		vim.api.nvim_feedkeys("ff", "x", false)
+		assert.spy(cb).was_called(1)
+	end)
 	-- #endregion
 
 	-- #region test case
