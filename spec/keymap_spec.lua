@@ -78,7 +78,7 @@ describe("keymap", function()
 	-- #region pre test
 
 	setup(function()
-		init_buf = vim.api.nvim_create_buf(false, false)
+		init_buf = vim.api.nvim_create_buf(false, true)
 		vim.api.nvim_set_current_buf(init_buf)
 
 		package.path = ("%s;lua/?.lua"):format(package.path)
@@ -1295,4 +1295,110 @@ describe("keymap", function()
 		assert.spy(cb3).was_called(1)
 	end)
 	-- #endregion
+
+	it("can invoke the #original keymap when invoked 1", function()
+		local k = M.k({
+			"l",
+			desc = "a keymap",
+			passthrough = true,
+		})
+
+		vim.api.nvim_buf_set_lines(init_buf, 0, -1, false, { "Hello, world!" })
+
+		local win = vim.api.nvim_open_win(init_buf, true, {
+			relative = "editor",
+			width = 80,
+			height = 20,
+			col = 10,
+			row = 10,
+			style = "minimal",
+		})
+
+
+		local cb = spy()
+		k(cb)
+
+		vim.api.nvim_feedkeys("l", "x", false)
+		assert.spy(cb).was_called(1)
+
+		local cursor = vim.api.nvim_win_get_cursor(win)
+		assert.are.same({ 1, 1 }, cursor)
+		vim.api.nvim_win_close(win, { force = true })
+	end)
+
+	it("can invoke the #original keymap when invoked 2", function()
+		local k = M.k({
+			"l",
+			desc = "a keymap",
+			passthrough = true,
+		})
+
+		vim.api.nvim_buf_set_lines(init_buf, 0, -1, false, { "Hello, world!" })
+
+		local win = vim.api.nvim_open_win(init_buf, true, {
+			relative = "editor",
+			width = 80,
+			height = 20,
+			col = 10,
+			row = 10,
+			style = "minimal",
+		})
+
+
+		local cb1 = spy()
+		local cb2 = spy()
+		k(cb1)
+		k(cb2)
+
+		vim.api.nvim_feedkeys("l", "x", false)
+		assert.spy(cb1).was_called(1)
+		assert.spy(cb2).was_called(1)
+
+		local cursor = vim.api.nvim_win_get_cursor(win)
+		assert.are.same({ 1, 1 }, cursor)
+		vim.api.nvim_win_close(win, { force = true })
+	end)
+
+	it("can invoke the #original keymap when invoked using the passthrough as function returning true 3", function()
+		local k = M.k({
+			"l",
+			desc = "a keymap",
+			passthrough = function()
+				return vim.g.canPassthrough
+			end,
+		})
+
+		vim.api.nvim_buf_set_lines(init_buf, 0, -1, false, { "Hello, world!" })
+
+		local win = vim.api.nvim_open_win(init_buf, true, {
+			relative = "editor",
+			width = 80,
+			height = 20,
+			col = 10,
+			row = 10,
+			style = "minimal",
+		})
+
+
+		local cb1 = spy()
+		local cb2 = spy()
+		k(cb1)
+		k(cb2)
+
+		vim.api.nvim_feedkeys("l", "x", false)
+		assert.spy(cb1).was_called(1)
+		assert.spy(cb2).was_called(1)
+		cb1:clear()
+		cb2:clear()
+
+		vim.g.canPassthrough = true
+		vim.api.nvim_feedkeys("l", "x", false)
+		assert.spy(cb1).was_called(1)
+		assert.spy(cb2).was_called(1)
+
+		local cursor = vim.api.nvim_win_get_cursor(win)
+		assert.are.same({ 1, 1 }, cursor)
+		vim.api.nvim_win_close(win, { force = true })
+	end)
+
 end)

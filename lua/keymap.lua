@@ -114,6 +114,7 @@ function M.create(opts)
 			wrapper = opts[2],
 			key = key,
 			enabled = true,
+			passthrough = opts.passthrough,
 			_registered = true,
 			condition = opts.condition,
 		}
@@ -138,6 +139,7 @@ function M.create(opts)
 		wrapper = opts[2],
 		key = key,
 		enabled = true,
+		passthrough = opts.passthrough,
 		_registered = false,
 		condition = opts.condition,
 	}
@@ -442,11 +444,39 @@ function M.register(keymap_id)
 			return
 		end
 
+		local function canRun(keymap)
+			if not keymap.condition then
+				return true
+			end
+
+			if type(keymap.condition) ~= "function" then
+				return false
+			end
+
+			return keymap.condition()
+		end
+
+		local should_passthrough = false
 		for _, keymapId in ipairs(keymapIds) do
 			local theKeymap = M.resolve(keymapId)
-			if not (theKeymap.condition and type(theKeymap.condition) == "function" and not theKeymap.condition()) then
+			if canRun(theKeymap) then
 				M.invoke(theKeymap, ctx)
 			end
+
+			if theKeymap.passthrough then
+				local passthrough_result = theKeymap.passthrough
+				if type(passthrough_result) == "function" then
+					if passthrough_result() then
+						should_passthrough = true
+					end
+				else
+					should_passthrough = true
+				end
+			end
+		end
+
+		if should_passthrough then
+			vim.api.nvim_feedkeys(key, "nx", false)
 		end
 	end, opts)
 end
