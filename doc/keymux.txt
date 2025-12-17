@@ -1,0 +1,159 @@
+*keymux.txt*    A keymap multiplexer for Neovim
+
+                                              KEYMUX(1)
+
+                                            Vim Plugin Documentation
+                                                    By 0xWal
+                                                keymux.nvim
+
+==============================================================================
+CONTENTS                                            *keymux-contents*
+
+1. Features     |keymux-features|
+2. API Reference                         |keymux-api|
+    - keymux.k()                     |keymux.k()|
+    - Handler Control                |keymux-handler-control|
+3. Options                                   |keymux-options|
+    - KeyMap Options                     |keymux-keymap-options|
+    - Callback Options                 |keymux-callback-options|
+4. Examples                        |keymux-examples|
+    - Filetype-specific handlers      |keymux-examples-filetype|
+    - Priority ordering                       |keymux-examples-priority|
+    - Context sharing                  |keymux-examples-context|
+    - Dynamic conditions                 |keymux-examples-conditions|
+    - Passthrough keymaps                 |keymux-examples-passthrough|
+
+==============================================================================
+1. FEATURES                                           *keymux-features*
+
+- Multiplex handlers: One key can trigger multiple handlers
+- Conditional execution: Filetype, buffer, and priority-based handlers
+- Context sharing: Pass data between handlers
+- Safe registration: Warns about conflicting keymaps
+- Dynamic conditions: Enable/disable keymaps based on global state
+- Passthrough: Execute original key behavior alongside custom handlers
+
+==============================================================================
+2. API REFERENCE                                     *keymux-api*
+
+keymux.k({opts})                                      *keymux.k()*
+    Creates a new keymap declaration.
+    
+    Parameters:
+        {opts} (table) Keymap options table
+        
+    Returns:
+        (function) Handler function to add callbacks
+
+HANDLER CONTROL                                  *keymux-handler-control*
+
+    local handler = keymap(function() end)
+    
+    handler.enable()   -- enable handler
+    handler.disable()  -- disable handler
+    handler.del()      -- remove handler
+
+==============================================================================
+3. OPTIONS                                           *keymux-options*
+
+KEYMAP OPTIONS                                  *keymux-keymap-options*
+
+KeyMapOptionsArg ~
+    [1] (string)         The key sequence
+    desc (string)         Description for the keymap
+    mode (string|table)   Vim mode(s) (default: "n")
+    filetype (string)      Filetype to restrict keymap to
+    noremap (boolean)     Don't remap (default: false)
+    once (boolean)        Remove after first execution
+    silent (boolean)       Silent execution (default: true)
+    [2] (function)        Wrapper function for all handlers
+    condition (function)   Enable keymap when function returns true
+    passthrough (boolean|function)  Execute original key behavior
+
+CALLBACK OPTIONS                               *keymux-callback-options*
+
+CallbackOptionsArg ~
+    name (string)         Unique name for the handler
+    desc (string)         Description for the handler
+    priority (number)      Higher numbers run first (default: 0)
+    filetype (string)      Restrict to specific filetype
+    buffer (number)       Restrict to specific buffer
+    once (boolean)        Remove after first execution
+    defer (boolean)        Don't execute immediately on creation
+
+==============================================================================
+4. EXAMPLES                                          *keymux-examples*
+
+FILETYPE-SPECIFIC HANDLERS                   *keymux-examples-filetype*
+
+>
+    local keymux = require("keymux")
+    
+    _G.run_code = keymux.k { "<leader>r", desc = "Run code" }
+    
+    -- Lua files
+    run_code(function()
+        vim.cmd("source %")
+    end, { filetype = "lua" })
+    
+    -- Python files
+    run_code(function()
+        vim.cmd("!python %")
+    end, { filetype = "python" })
+
+PRIORITY ORDERING                               *keymux-examples-priority*
+
+>
+    _G.ordered = keymux.k { "<leader>o", desc = "Ordered" }
+    
+    ordered(function() print("3") end)                    -- priority: 0
+    ordered(function() print("2") end, { priority = 100 })
+    ordered(function() print("1") end, { priority = 200 })
+    
+    -- Output: 1, 2, 3
+
+CONTEXT SHARING                                   *keymux-examples-context*
+
+>
+    _G.ctx_example = keymux.k { "<leader>c", desc = "Context example" }
+    
+    ctx_example(function(ctx)
+        ctx.count = (ctx.count or 0) + 1
+        print("Count: " .. ctx.count)
+    end)
+    
+    ctx_example(function(ctx)
+        print("Previous count: " .. (ctx.count - 1))
+    end)
+
+DYNAMIC CONDITIONS                             *keymux-examples-conditions*
+
+>
+    _G.debug_toggle = keymux.k { 
+        "<leader>d", 
+        desc = "Debug toggle",
+        condition = function()
+            return vim.g.debug_enabled
+        end,
+    }
+    
+    debug_toggle(function()
+        print("Debug action executed")
+    end)
+
+PASSTHROUGH KEYMAPS                             *keymux-examples-passthrough*
+
+>
+    _G.smart_l = keymux.k { 
+        "l", 
+        desc = "Smart movement",
+        passthrough = true,  -- Also execute normal 'l' behavior
+    }
+    
+    smart_l(function()
+        -- Custom logic before normal movement
+        vim.notify("Moving right")
+    end)
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

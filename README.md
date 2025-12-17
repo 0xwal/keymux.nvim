@@ -74,6 +74,9 @@ For example, `<M-]>` triggers supermaven first; if the suggestion isn't good, pr
 - **Dynamic conditions**: Enable/disable keymaps based on global state
 - **Passthrough**: Execute original key behavior alongside custom handlers
 
+## Documentation
+
+Type `:help keymux` to view full documentation in Vim.
 
 ## Installation
 
