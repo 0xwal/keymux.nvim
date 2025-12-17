@@ -18,13 +18,29 @@ A keymap multiplexer for Neovim - declare keymaps once, add handlers from anywhe
     ```
 - Register n handlers for a keymap:
 I use two ai completion plugins (codeium, supermaven), why two?  
-    **supermaven**: faster but suggestion quality is mostly ok  
-    **codeium**: slower but suggestion quality is better  
+    **supermaven**: faster but suggestion quality is mostly ok  (enabled by default)  
+    **codeium**: slower but suggestion quality is better (disabled by default, only on demand)  
 Neovim doesn't allow multiple handlers for the same keymap, so this plugin enables that.  
-For example, <M-]> triggers supermaven first; if the suggestion isn't good, press <M-]> again for codeium.
+For example, `<M-]>` triggers supermaven first; if the suggestion isn't good, press `<M-]>` again for codeium.
+    ```lua
+    _G.ai_next_suggestion = keymux.k { "<M-]>", desc = "next suggestion" }
+
+    -- *in supermaven.lua plugin config (this how I split plugins)
+    _G.ai_next_suggestion(function(ctx)
+        -- hide supermaven ai suggestion
+        require("supermaven.completion_preview").on_dispose_inlay()
+    end, { name = "supermaven ai completion", priority = 100 })
+
+
+    -- *in codeium.lua plugin config (disabling the plugin doesn't effect the setup)
+    _G.ai_next_suggestion(function(ctx)
+        -- now show the suggestion
+        require("neocodeium").cycle_or_complete()
+    end, { name = "codeium ai completion" })
+    ```
 
 - I want to use fewer keymaps and only use them in specific scenarios
-    - `o` is a new line, but I want when in debugging state, I want o to be a step over
+    - `o` is a new line, but I want when in debugging state, I want `o` to be a step over
         ```lua
         _G.debug_o = keymux.k { 
             "o",
@@ -48,14 +64,16 @@ For example, <M-]> triggers supermaven first; if the suggestion isn't good, pres
         debug_o("CLEAR") -- will clear all keymap and restore `o`
 
         ```
-    - ``
 
 ## Features
 
-- Enhance keymaps with context sharing, filetype/buffer conditions, priority ordering, wrappers, oneshot execution, and middleware-like behavior.
-- Avoid keymap conflicts by separating declaration from handler assignment.
-- Better api and all declaration can be in one place
-- Assign multiple handlers to one keymap with fallback logic.
+- **Multiplex handlers**: One key can trigger multiple handlers
+- **Conditional execution**: Filetype, buffer, and priority-based handlers
+- **Context sharing**: Pass data between handlers
+- **Safe registration**: Warns about conflicting keymaps
+- **Dynamic conditions**: Enable/disable keymaps based on global state
+- **Passthrough**: Execute original key behavior alongside custom handlers
+
 
 ## Installation
 
@@ -91,15 +109,6 @@ end)
 ```
 
 Press `<leader>ff` to run both handlers in sequence.
-
-## Features
-
-- **Multiplex handlers**: One key can trigger multiple handlers
-- **Conditional execution**: Filetype, buffer, and priority-based handlers
-- **Context sharing**: Pass data between handlers
-- **Safe registration**: Warns about conflicting keymaps
-- **Dynamic conditions**: Enable/disable keymaps based on global state
-- **Passthrough**: Execute original key behavior alongside custom handlers
 
 ## API
 
