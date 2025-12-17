@@ -265,6 +265,8 @@ function M.pack(keymap)
 		key = keymap.key,
 		desc = keymap.desc,
 		mode = keymap.mode,
+		condition = keymap.condition,
+		passthrough = keymap.passthrough,
 
 		---@param cb Callback
 		callbacks = vim.tbl_map(function(cb)

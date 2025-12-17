@@ -58,6 +58,8 @@ local function get_actual_info(key, mode)
 			filetype = keymap.filetype or "*",
 			once = keymap.once and "YES" or "NO",
 			hasWrapper = keymap.wrapper ~= nil,
+			condition = keymap.condition,
+			passthrough = keymap.passthrough,
 			callbacks = vim.tbl_map(function(callback)
 				return {
 					id = callback.id,
@@ -85,10 +87,10 @@ local function to_string(keymaps)
 		local callbacks = {}
 
 		for _, callback in ipairs(keymap.callbacks) do
-			table.insert(
-				callbacks,
-				string.format(
-					[[
+				table.insert(
+					callbacks,
+					string.format(
+						[[
 	Name: %s
 	Once: %s
 	Desc: %s
@@ -98,12 +100,12 @@ local function to_string(keymaps)
 	Buffer: %s
 				]],
 					callback.name or "",
-					callback.once,
+					tostring(callback.once),
 					callback.desc or "",
-					callback.priority or 0,
-					callback.filetype,
-					callback.enabled,
-					callback.buffer or ""
+					tostring(callback.priority or 0),
+					callback.filetype or "",
+					tostring(callback.enabled),
+					tostring(callback.buffer or "")
 				)
 			)
 		end
@@ -112,12 +114,14 @@ local function to_string(keymaps)
 			out,
 			string.format(
 				[[
-Key: %s
-Mode: %s
-Desc: %s
-Filetype: %s
-Once: %s
-Callbacks:
+ Key: %s
+ Mode: %s
+ Desc: %s
+ Filetype: %s
+ Once: %s
+ Condition: %s
+ Passthrough: %s
+ Callbacks:
 %s
 		]],
 				keymap.key,
@@ -125,6 +129,8 @@ Callbacks:
 				keymap.desc,
 				keymap.filetype,
 				keymap.once,
+				keymap.condition and "YES" or "NO",
+				keymap.passthrough and "YES" or "NO",
 				table.concat(callbacks, "\n")
 			)
 		)
