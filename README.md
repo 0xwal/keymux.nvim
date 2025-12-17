@@ -114,15 +114,44 @@ Press `<leader>ff` to run both handlers in sequence.
 
 ### `keymux.k(opts)`
 
-Create a keymap declaration:
+Creates a new keymap declaration.
+
+#### Options (`KeyMapOptionsArg`)
+
+**Wrapper Function Signature:**
+```lua
+---@field [2] fun(handler: table): any
+-- handler has __newindex and __call metamethods
+-- handler.ctx = value  -- sets context
+-- handler()           -- calls the handler
+```
+
+| Field | Type | Optional | Description |
+|-------|------|----------|-------------|
+| `[1]` | `string` | No | The key sequence |
+| `desc` | `string` | No | Description for the keymap |
+| `mode` | `string\|table` | Yes | Vim mode(s) (default: `"n"`) |
+| `filetype` | `string` | Yes | Filetype to restrict keymap to |
+| `noremap` | `boolean` | Yes | Don't remap (default: `false`) |
+| `once` | `boolean` | Yes | Remove after first execution |
+| `silent` | `boolean` | Yes | Silent execution (default: `true`) |
+| `[2]` | `function` | Yes | Wrapper function for all handlers (`fun(handler: table): any`) |
+| `condition` | `function` | Yes | Enable keymap when function returns `true` (`fun(): boolean`) |
+| `passthrough` | `boolean\|function` | Yes | Execute original key behavior (`fun(): boolean?`) |
 
 ```lua
 local keymap = keymux.k {
-  "<leader>x",
-  desc = "Description",
-  mode = "n",           -- optional, default "n"
-  filetype = "lua",     -- optional
-  once = true,          -- optional
+  "<leader>x",           ---@field [1] string The key sequence
+  desc = "Description", ---@field desc string Description for the keymap
+  mode = "n",           ---@field mode? string|table Vim mode(s) (default: "n")
+  filetype = "lua",     ---@field filetype? string Filetype to restrict keymap to
+  once = true,          ---@field once? boolean Remove after first execution
+  noremap = false,      ---@field noremap? boolean Don't remap (default: false)
+  silent = true,         ---@field silent? boolean Silent execution (default: true)
+  condition = function() ---@field condition? fun(): boolean Enable keymap when function returns true
+    return vim.g.enabled
+  end,
+  passthrough = true,    ---@field passthrough? boolean|fun(): boolean? Execute original key behavior
 }
 ```
 
@@ -133,13 +162,27 @@ keymap(function(ctx)
   -- your code here
   return true  -- stop execution chain
 end, {
-  name = "handler-name",   -- optional
-  priority = 100,          -- optional, higher runs first
-  filetype = "lua",        -- optional
-  buffer = 0,              -- optional
-  once = true,             -- optional
+  name = "handler-name",   ---@field name? string Unique name for the handler
+  desc = "Handler desc",   ---@field desc? string Description for the handler
+  priority = 100,          ---@field priority? number Higher numbers run first (default: 0)
+  filetype = "lua",        ---@field filetype? string Restrict to specific filetype
+  buffer = 0,              ---@field buffer? number Restrict to specific buffer
+  once = true,             ---@field once? boolean Remove after first execution
+  defer = false,            ---@field defer? boolean Don't execute immediately on creation
 })
 ```
+
+#### Handler Options (`CallbackOptionsArg`)
+
+| Field | Type | Optional | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Unique name for the handler |
+| `desc` | `string` | Yes | Description for the handler |
+| `priority` | `number` | Yes | Higher numbers run first (default: `0`) |
+| `filetype` | `string` | Yes | Restrict to specific filetype |
+| `buffer` | `number` | Yes | Restrict to specific buffer |
+| `once` | `boolean` | Yes | Remove after first execution |
+| `defer` | `boolean` | Yes | Don't execute immediately on creation (default: `false`) |
 
 ### Handler Control
 
