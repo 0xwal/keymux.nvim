@@ -49,6 +49,8 @@ Press `<leader>ff` to run both handlers in sequence.
 - **Conditional execution**: Filetype, buffer, and priority-based handlers
 - **Context sharing**: Pass data between handlers
 - **Safe registration**: Warns about conflicting keymaps
+- **Dynamic conditions**: Enable/disable keymaps based on global state
+- **Passthrough**: Execute original key behavior alongside custom handlers
 
 ## API
 
@@ -119,6 +121,37 @@ ordered(function() print("2") end, { priority = 100 })
 ordered(function() print("1") end, { priority = 200 })
 
 -- Output: 1, 2, 3
+```
+
+### Dynamic conditions
+
+```lua
+_G.debug_toggle = keymux.k { 
+  "<leader>d", 
+  desc = "Debug toggle",
+  condition = function()
+    return vim.g.debug_enabled
+  end,
+}
+
+debug_toggle(function()
+  print("Debug action executed")
+end)
+```
+
+### Passthrough keymaps
+
+```lua
+_G.smart_l = keymux.k { 
+  "l", 
+  desc = "Smart movement",
+  passthrough = true,  -- Also execute normal 'l' behavior
+}
+
+smart_l(function()
+  -- Custom logic before normal movement
+  vim.notify("Moving right")
+end)
 ```
 
 ### Context sharing
