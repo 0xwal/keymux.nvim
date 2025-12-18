@@ -71,6 +71,18 @@ local function make_identifier_for_keymode(key, mode)
 	return identifier
 end
 
+local function canRun(keymap)
+	if not keymap.condition then
+		return true
+	end
+
+	if type(keymap.condition) ~= "function" then
+		return false
+	end
+
+	return keymap.condition()
+end
+
 ---@param keymode_identifier string
 local function is_keymode_registered(keymode_identifier)
 	return g_registered_keymode[keymode_identifier]
@@ -446,18 +458,6 @@ function M.register(keymap_id)
 			return
 		end
 
-		local function canRun(keymap)
-			if not keymap.condition then
-				return true
-			end
-
-			if type(keymap.condition) ~= "function" then
-				return false
-			end
-
-			return keymap.condition()
-		end
-
 		local should_passthrough = false
 		for _, keymapId in ipairs(keymapIds) do
 			local theKeymap = M.resolve(keymapId)
@@ -467,13 +467,7 @@ function M.register(keymap_id)
 
 			if theKeymap.passthrough then
 				local passthrough_result = theKeymap.passthrough
-				if type(passthrough_result) == "function" then
-					if passthrough_result() then
-						should_passthrough = true
-					end
-				else
-					should_passthrough = true
-				end
+				should_passthrough = (type(passthrough_result) ~= "function") or passthrough_result()
 			end
 		end
 
