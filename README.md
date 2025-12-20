@@ -135,7 +135,6 @@ Configure keymux behavior, including duplicate warnings.
 | Field | Type | Optional | Description |
 |-------|------|----------|-------------|
 | `detect` | `boolean` | Yes | Enable duplicate detection (default: `false`) |
-
 | `on_duplicate` | `fun(keymaps: KeyMap[])` | Yes | Callback function called when duplicate detected (receives all existing keymaps) |
 
 
