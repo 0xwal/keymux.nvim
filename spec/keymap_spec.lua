@@ -1314,7 +1314,6 @@ describe("keymap", function()
 			style = "minimal",
 		})
 
-
 		local cb = spy()
 		k(cb)
 
@@ -1343,7 +1342,6 @@ describe("keymap", function()
 			row = 10,
 			style = "minimal",
 		})
-
 
 		local cb1 = spy()
 		local cb2 = spy()
@@ -1379,7 +1377,6 @@ describe("keymap", function()
 			style = "minimal",
 		})
 
-
 		local cb1 = spy()
 		local cb2 = spy()
 		k(cb1)
@@ -1401,4 +1398,63 @@ describe("keymap", function()
 		vim.api.nvim_win_close(win, { force = true })
 	end)
 
+	describe("duplicate", function()
+		it("expect not to warn when disabled", function()
+			local on_dup = stub()
+
+			M.setup({
+				duplicate = {
+					detect = false,
+					on_duplicate = on_dup,
+				},
+			})
+
+			local k1 = M.k({
+				"dd",
+				desc = "first keymap",
+			})
+
+			local k2 = M.k({
+				"dd",
+				desc = "second keymap",
+			})
+
+			assert.spy(on_dup).was_called(0)
+		end)
+
+		it("warn when enabled", function()
+			local on_dup = stub()
+
+			M.setup({
+				duplicate = {
+					detect = true,
+					on_duplicate = on_dup,
+				},
+			})
+
+			local k1 = M.k({
+				"dd",
+				desc = "first keymap",
+			})
+
+			local k2 = M.k({
+				"dd",
+				desc = "second keymap",
+			})
+
+			assert.stub(on_dup).was_called(1)
+			assert.stub(on_dup).was_called_with({
+				{
+					key = "dd",
+					mode = "n",
+					desc = "first keymap",
+				},
+				{
+					key = "dd",
+					mode = "n",
+					desc = "second keymap",
+				},
+			})
+		end)
+	end)
 end)

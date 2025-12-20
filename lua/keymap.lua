@@ -100,8 +100,48 @@ local function is_callable(var)
 	return getmetatable(var) ~= nil and getmetatable(var).__call ~= nil
 end
 
+local function on_duplicate(keymaps, key, mode, config)
+	local descs = {}
+	for _, keymap in ipairs(keymaps) do
+		table.insert(descs, ('"%s"'):format(keymap.desc))
+	end
+	local desc_list = table.concat(descs, ", ")
+	local formatted_message = ("Duplicate keymap detected: %s (%s mode): %s"):format(key, mode, desc_list)
+
+	vim.notify(formatted_message, vim.log.levels.WARN)
+end
+
+---Detect duplicate keymaps for a given key and mode
+---@param mode string
+---@param key string
+---@return KeyMap[] Array of duplicate keymaps (including existing ones), or empty table if no duplicates
+function M.detect_duplicates(mode, key)
+	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
+	local existing_keymaps = g_registered_keymode[keymodeIdentifier]
+	
+	if not existing_keymaps or #existing_keymaps == 0 then
+		return {}
+	end
+	
+	-- Return existing keymaps in registration order
+	local all_keymaps = {}
+	for _, existing_id in ipairs(existing_keymaps) do
+		local keymap = g_maps[existing_id]
+		if keymap then
+			table.insert(all_keymaps, {
+				key = keymap.key,
+				mode = keymap.mode,
+				desc = keymap.desc,
+			})
+		end
+	end
+	
+	return all_keymaps
+end
+
 ---@param opts KeyMapOptionsArg
-function M.create(opts)
+---@param config ?table
+function M.create(opts, config)
 	assert(opts.desc, "opts.desc must be a string")
 	assert(type(opts[1]) == "string", "opts[1] must be a string for key")
 	assert(not opts[2] or type(opts[2]) == "function", "opts[2] must be a function")
@@ -112,6 +152,24 @@ function M.create(opts)
 	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
 
 	local id = ("%s-%s-%s"):format(vim.inspect(mode), key, make_id())
+
+	if config and config.duplicate and config.duplicate.detect then
+		local on_dup = is_callable(config.duplicate.on_duplicate) and config.duplicate.on_duplicate or function(keymaps)
+			on_duplicate(keymaps, key, mode, config)
+		end
+		local existing_keymaps = M.detect_duplicates(mode, key)
+		if existing_keymaps and #existing_keymaps > 0 then
+			local current_keymap = {
+				key = key,
+				desc = opts.desc,
+				mode = mode,
+			}
+			local all_keymaps = vim.deepcopy(existing_keymaps)
+			table.insert(all_keymaps, current_keymap)
+
+			on_dup(all_keymaps)
+		end
+	end
 
 	if is_keymode_registered(keymodeIdentifier) then
 		---@type KeyMap

@@ -70,6 +70,7 @@ For example, `<M-]>` triggers supermaven first; if the suggestion isn't good, pr
 - **Multiplex handlers**: One key can trigger multiple handlers
 - **Conditional execution**: Filetype, buffer, and priority-based handlers
 - **Context sharing**: Pass data between handlers
+- **Duplicate warnings**: Configurable warnings for duplicate keymap declarations
 - **Safe registration**: Warns about conflicting keymaps
 - **Dynamic conditions**: Enable/disable keymaps based on global state
 - **Passthrough**: Execute original key behavior alongside custom handlers
@@ -85,7 +86,11 @@ Type `:help keymux` to view full documentation in Vim.
   "0xWal/keymux.nvim",
   priority = 1000,
   init = function()
-    require("keymux").setup()
+    require("keymux").setup({
+      duplicate = {
+        detect = true,
+      },
+    })
   end,
 }
 ```
@@ -113,7 +118,73 @@ end)
 
 Press `<leader>ff` to run both handlers in sequence.
 
+## Configuration
+
+### `keymux.setup(opts)`
+
+Configure keymux behavior, including duplicate warnings.
+
+#### Options
+
+| Field | Type | Optional | Description |
+|-------|------|----------|-------------|
+| `duplicate` | `table` | Yes | Duplicate warning configuration |
+
+#### Duplicate Configuration (`DuplicateConfig`)
+
+| Field | Type | Optional | Description |
+|-------|------|----------|-------------|
+| `detect` | `boolean` | Yes | Enable duplicate detection (default: `false`) |
+
+| `on_duplicate` | `fun(keymaps: KeyMap[])` | Yes | Callback function called when duplicate detected (receives all existing keymaps) |
+
+
+
+#### Example Configuration
+
+```lua
+require("keymux").setup({
+  duplicate = {
+    detect = true,
+    on_duplicate = function(keymaps)
+      -- Custom duplicate handling
+      local descs = vim.tbl_map(function(km) return km.desc end, keymaps)
+      vim.notify("Duplicate found: " .. table.concat(descs, ", "), vim.log.levels.WARN)
+    end,
+  },
+})
+```
+
 ## API
+
+### `keymux.detect_duplicates(mode, key)`
+
+Detect duplicate keymaps for a given key and mode.
+
+#### Parameters
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mode` | `string` | Vim mode (e.g., "n", "i", "v") |
+| `key` | `string` | Key sequence |
+
+#### Returns
+
+| Type | Description |
+|------|-------------|
+| `KeyMap[]` | Array of duplicate keymaps in registration order, or empty table if no duplicates |
+
+#### Example
+
+```lua
+local duplicates = keymux.detect_duplicates("n", "<leader>ff")
+if #duplicates > 0 then
+  print("Found duplicates:", #duplicates)
+  for _, km in ipairs(duplicates) do
+    print("  -", km.desc)
+  end
+end
+```
 
 ### `keymux.k(opts)`
 

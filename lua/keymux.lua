@@ -2,6 +2,21 @@ local keymapModule = require("keymap")
 
 local M = {}
 
+---@class KeymuxConfig
+---@field duplicate ?DuplicateConfig
+---@field [string] any
+
+---@class DuplicateConfig
+---@field detect ?boolean Enable duplicate detection (default: false)
+---@field on_duplicate ?fun(keymaps: KeyMap[]): Callback function called when duplicate detected
+
+---@type KeymuxConfig
+local config = {
+	duplicate = {
+		detect = false,
+	},
+}
+
 M.inspect = function(key)
 	return keymapModule.resolve_all_keymap_by_key(key)
 end
@@ -22,12 +37,20 @@ function M.remove_keymaps(key, mode)
 	end
 end
 
+M.get_config = function()
+	return config
+end
+
+M.detect_duplicates = function(mode, key)
+	return keymapModule.detect_duplicates(mode, key)
+end
+
 M.k = function(opts)
 	if opts.enabled and type(opts.enabled) == "function" and not opts.enabled() then
 		return
 	end
 
-	local keymap = keymapModule.create(opts)
+	local keymap = keymapModule.create(opts, config)
 
 	return function(handler, extra)
 		if not handler then
@@ -51,7 +74,6 @@ M.k = function(opts)
 			local callback = keymapModule.add_handler(keymap.id, handler, extra)
 			return callback
 		end)()
-
 
 		if not extra.defer then
 			keymapModule.register(keymap.id)
@@ -96,7 +118,21 @@ M.clear_keymap = function(key)
 	end
 end
 
-function M.setup()
+function M.setup(opts)
+	opts = opts or {}
+
+	-- Merge user config with defaults
+	if opts.duplicate then
+		config.duplicate = vim.tbl_deep_extend("force", config.duplicate, opts.duplicate)
+	end
+
+	-- Store other config options
+	for key, value in pairs(opts) do
+		if key ~= "duplicate" then
+			config[key] = value
+		end
+	end
+
 	vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout", "BufUnload" }, {
 		group = vim.api.nvim_create_augroup("nvim-keymap-delete-autocmd", { clear = true }),
 		pattern = "*",

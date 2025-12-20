@@ -29,6 +29,7 @@ CONTENTS                                            *keymux-contents*
 - Multiplex handlers: One key can trigger multiple handlers
 - Conditional execution: Filetype, buffer, and priority-based handlers
 - Context sharing: Pass data between handlers
+- Duplicate detection: Configurable warnings for duplicate keymap declarations
 - Safe registration: Warns about conflicting keymaps
 - Dynamic conditions: Enable/disable keymaps based on global state
 - Passthrough: Execute original key behavior alongside custom handlers
@@ -44,6 +45,27 @@ keymux.k({opts})                                      *keymux.k()*
         
     Returns:
         (function) Handler function to add callbacks
+
+keymux.detect_duplicates(mode, key)                 *keymux.detect_duplicates()*
+    Detect duplicate keymaps for a given key and mode.
+    
+    Parameters:
+        {mode} (string) Vim mode (e.g., "n", "i", "v")
+        {key} (string) Key sequence
+        
+    Returns:
+        (table) Array of duplicate keymaps in registration order, or empty table if no duplicates
+
+keymux.setup({opts})                                 *keymux.setup()*
+    Configure keymux behavior, including duplicate warnings.
+    
+    Parameters:
+        {opts} (table) Configuration options table
+        
+    Configuration Options:
+        duplicate (table) Duplicate warning configuration
+            detect (boolean) Enable duplicate detection (default: false)
+            on_duplicate (function) Callback function called when duplicate detected
 
 HANDLER CONTROL                                  *keymux-handler-control*
 
@@ -81,8 +103,32 @@ CallbackOptionsArg ~
     once (boolean)        Remove after first execution
     defer (boolean)        Don't execute immediately on creation
 
+DUPLICATE CONFIGURATION                         *keymux-duplicate-config*
+
+DuplicateConfig ~
+    detect (boolean)       Enable duplicate detection (default: false)
+    on_duplicate (function) Callback function called when duplicate detected
+
 ==============================================================================
 4. EXAMPLES                                          *keymux-examples*
+
+DUPLICATE DETECTION                             *keymux-examples-duplicate*
+
+>
+    require("keymux").setup({
+        duplicate = {
+            detect = true,
+            on_duplicate = function(keymaps)
+                -- Custom duplicate handling
+                local descs = vim.tbl_map(function(km) return km.desc end, keymaps)
+                vim.notify("Duplicate found: " .. table.concat(descs, ", "), vim.log.levels.WARN)
+            end,
+        },
+    })
+    
+    -- This will trigger duplicate warning
+    local k1 = keymux.k { "<leader>f", desc = "First file finder" }
+    local k2 = keymux.k { "<leader>f", desc = "Second file finder" }
 
 FILETYPE-SPECIFIC HANDLERS                   *keymux-examples-filetype*
 
