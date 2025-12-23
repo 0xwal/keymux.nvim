@@ -541,7 +541,7 @@ function M.register(keymap_id)
 		end
 
 		if should_passthrough then
-			vim.api.nvim_feedkeys(key, "nx", false)
+			vim.api.nvim_feedkeys(key, "n", false)
 		end
 	end, opts)
 end
