@@ -10,6 +10,8 @@
 ---@field silent boolean
 ---@field callbacks Callback[]
 ---@field filetype string
+---@field condition fun(): boolean
+---@field passthrough boolean|fun(): boolean
 ---@field mode string|string[]
 ---@field wrapper WrapperFn
 ---@field _registered boolean
@@ -30,6 +32,8 @@
 ---@field mode ?string|table
 ---@field noremap ?boolean
 ---@field once ?boolean
+---@field passthrough ?boolean|fun(): boolean
+---@field condition fun(): boolean
 ---@field silent ?boolean
 ---@field filetype ?string
 ---@field [1] string
