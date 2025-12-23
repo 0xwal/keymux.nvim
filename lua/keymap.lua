@@ -122,11 +122,11 @@ end
 function M.detect_duplicates(mode, key)
 	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
 	local existing_keymaps = g_registered_keymode[keymodeIdentifier]
-	
+
 	if not existing_keymaps or #existing_keymaps == 0 then
 		return {}
 	end
-	
+
 	-- Return existing keymaps in registration order
 	local all_keymaps = {}
 	for _, existing_id in ipairs(existing_keymaps) do
@@ -139,7 +139,7 @@ function M.detect_duplicates(mode, key)
 			})
 		end
 	end
-	
+
 	return all_keymaps
 end
 
@@ -158,9 +158,10 @@ function M.create(opts, config)
 	local id = ("%s-%s-%s"):format(vim.inspect(mode), key, make_id())
 
 	if config and config.duplicate and config.duplicate.detect then
-		local on_dup = is_callable(config.duplicate.on_duplicate) and config.duplicate.on_duplicate or function(keymaps)
-			on_duplicate(keymaps, key, mode, config)
-		end
+		local on_dup = is_callable(config.duplicate.on_duplicate) and config.duplicate.on_duplicate
+			or function(keymaps)
+				on_duplicate(keymaps, key, mode, config)
+			end
 		local existing_keymaps = M.detect_duplicates(mode, key)
 		if existing_keymaps and #existing_keymaps > 0 then
 			local current_keymap = {
@@ -175,7 +176,8 @@ function M.create(opts, config)
 		end
 	end
 
-	if is_keymode_registered(keymodeIdentifier) then
+	local allSameKeymaps = is_keymode_registered(keymodeIdentifier)
+	if allSameKeymaps then
 		---@type KeyMap
 		local keymap = {
 			id = id,
@@ -189,7 +191,7 @@ function M.create(opts, config)
 			key = key,
 			enabled = true,
 			passthrough = opts.passthrough,
-			_registered = true,
+			_registered = false,
 			condition = opts.condition,
 		}
 
@@ -485,10 +487,15 @@ function M.register(keymap_id)
 
 	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
 
-	if keymap._registered then
+	local registered_keymaps = vim.tbl_filter(function(keymapId)
+		return g_maps[keymapId]._registered
+	end, is_keymode_registered(keymodeIdentifier))
+
+	if #registered_keymaps > 0 then
 		if not vim.list_contains(g_registered_keymode[keymodeIdentifier], keymap.id) then
 			table.insert(g_registered_keymode[keymodeIdentifier], keymap.id)
 		end
+
 		return
 	end
 

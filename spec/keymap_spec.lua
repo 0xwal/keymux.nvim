@@ -1325,6 +1325,54 @@ describe("keymap", function()
 		vim.api.nvim_win_close(win, { force = true })
 	end)
 
+	it("can register the same key when the first keymap is not adding handler", function()
+		M.k({
+			"o",
+			desc = "a keymap",
+			condition = function()
+				return false
+			end,
+			passthrough = false,
+		})
+
+		local k2 = M.k({
+			"o",
+			desc = "a keymap",
+			passthrough = true,
+			condition = function()
+				return true
+			end
+		})
+
+		local cb1 = spy()
+		local cb2 = spy()
+
+		k2(cb2)
+
+		do
+			vim.api.nvim_buf_set_lines(init_buf, 0, -1, false, { "Hello, world!" })
+
+			local win = vim.api.nvim_open_win(init_buf, true, {
+				relative = "editor",
+				width = 80,
+				height = 20,
+				col = 10,
+				row = 10,
+				style = "minimal",
+			})
+
+			vim.api.nvim_feedkeys("o", "x", false)
+
+			assert.spy(cb1).was_called(0)
+			assert.spy(cb2).was_called(1)
+
+			local cursor = vim.api.nvim_win_get_cursor(win)
+			assert.are.same({ 2, 0 }, cursor)
+			vim.api.nvim_win_close(win, { force = true })
+
+		end
+	end)
+
 	it("can invoke the #original keymap when invoked 2", function()
 		local k = M.k({
 			"l",
