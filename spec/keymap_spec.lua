@@ -847,6 +847,159 @@ describe("keymap", function()
 	-- #endregion
 
 	-- #region test case
+	it("#17-1 can register to specific #pattern when declaring", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+			pattern = ".env",
+		})
+
+		local cb = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/to/.env")
+
+		k(cb)
+
+		do -- check if registered
+			assert.spy(vim.keymap.set).was_called(1)
+			assert.spy(vim.keymap.set).was_called_with(
+				"n",
+				"ff",
+				match.is_function(),
+				match.same({
+					desc = "a keymap",
+					noremap = false,
+					silent = true,
+				})
+			)
+		end
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			vim.api.nvim_buf_call(init_buf, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb).was_called(2)
+		end
+	end)
+
+	it("#17-2 can register to specific #pattern when defining", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+		})
+
+		local cb1 = stub()
+		local cb2 = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/to/.env.test")
+
+		k(cb1, { pattern = ".env*" })
+		k(cb2)
+
+		do -- check if registered
+			assert.spy(vim.keymap.set).was_called(1)
+			assert.spy(vim.keymap.set).was_called_with(
+				"n",
+				"ff",
+				match.is_function(),
+				match.same({
+					desc = "a keymap",
+					noremap = false,
+					silent = true,
+				})
+			)
+		end
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			vim.api.nvim_buf_call(init_buf, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(1)
+			assert.spy(cb2).was_called(2)
+		end
+	end)
+
+	it("#17-3 can register to specific #pattern with wildcards", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+		})
+
+		local cb1 = stub()
+		local cb2 = stub()
+
+		local target_buffer1 = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer1, "/path/to/.env.local")
+
+		local target_buffer2 = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer2, "/path/to/.env.prod")
+
+		k(cb1, { pattern = ".env*" })
+		k(cb2)
+
+		do -- check if it called for .env.local
+			vim.api.nvim_buf_call(target_buffer1, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(1)
+			assert.spy(cb2).was_called(1)
+		end
+
+		cb1:clear()
+		cb2:clear()
+
+		do -- check if it called for .env
+			vim.api.nvim_buf_call(target_buffer2, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(1)
+			assert.spy(cb2).was_called(1)
+		end
+	end)
+
+	it("#17-4 pattern should not match when filename doesn't match", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+		})
+
+		local cb1 = stub()
+		local cb2 = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/to/config.txt")
+
+		k(cb1, { pattern = ".env*" })
+		k(cb2)
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(0)
+			assert.spy(cb2).was_called(1)
+		end
+	end)
+
+	-- #endregion
+
+	-- #region test case
 	it("#18 can #conditionally register keymap", function()
 		M.k({
 			"ff",

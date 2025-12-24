@@ -205,6 +205,7 @@ Creates a new keymap declaration.
 | `desc` | `string` | No | Description for the keymap |
 | `mode` | `string\|table` | Yes | Vim mode(s) (default: `"n"`) |
 | `filetype` | `string` | Yes | Filetype to restrict keymap to |
+| `pattern` | `string` | Yes | File pattern to restrict keymap to (supports `*` wildcards) |
 | `noremap` | `boolean` | Yes | Don't remap (default: `false`) |
 | `once` | `boolean` | Yes | Remove after first execution |
 | `silent` | `boolean` | Yes | Silent execution (default: `true`) |
@@ -218,6 +219,7 @@ local keymap = keymux.k {
   desc = "Description", ---@field desc string Description for the keymap
   mode = "n",           ---@field mode? string|table Vim mode(s) (default: "n")
   filetype = "lua",     ---@field filetype? string Filetype to restrict keymap to
+  pattern = ".env*",     ---@field pattern? string File pattern to restrict keymap to (supports * wildcards)
   once = true,          ---@field once? boolean Remove after first execution
   noremap = false,      ---@field noremap? boolean Don't remap (default: false)
   silent = true,         ---@field silent? boolean Silent execution (default: true)
@@ -253,6 +255,7 @@ end, {
 | `desc` | `string` | Yes | Description for the handler |
 | `priority` | `number` | Yes | Higher numbers run first (default: `0`) |
 | `filetype` | `string` | Yes | Restrict to specific filetype |
+| `pattern` | `string` | Yes | Restrict to specific file pattern (supports `*` wildcards) |
 | `buffer` | `number` | Yes | Restrict to specific buffer |
 | `once` | `boolean` | Yes | Remove after first execution |
 | `defer` | `boolean` | Yes | Don't execute immediately on creation (default: `false`) |
@@ -283,6 +286,27 @@ end, { filetype = "lua" })
 run_code(function()
   vim.cmd("!python %")
 end, { filetype = "python" })
+```
+
+### Pattern-specific handlers
+
+```lua
+_G.env_actions = keymux.k { "<leader>e", desc = "Environment file actions" }
+
+-- .env files
+env_actions(function()
+  vim.cmd("sort")
+end, { pattern = ".env" })
+
+-- All .env variants (supports wildcards)
+env_actions(function()
+  vim.notify("This is an environment file")
+end, { pattern = ".env*" })
+
+-- Docker files
+env_actions(function()
+  vim.cmd("DockerBuild")
+end, { pattern = "Dockerfile*" })
 ```
 
 ### Priority ordering

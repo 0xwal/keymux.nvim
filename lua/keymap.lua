@@ -10,6 +10,7 @@
 ---@field silent boolean
 ---@field callbacks Callback[]
 ---@field filetype string
+---@field pattern string
 ---@field condition fun(): boolean
 ---@field passthrough boolean|fun(): boolean
 ---@field mode string|string[]
@@ -21,6 +22,7 @@
 ---@field desc string
 ---@field once boolean
 ---@field filetype string
+---@field pattern string
 ---@field handler HandlerFn
 ---@field enabled boolean
 ---@field buffer number
@@ -36,6 +38,7 @@
 ---@field condition fun(): boolean
 ---@field silent ?boolean
 ---@field filetype ?string
+---@field pattern ?string
 ---@field [1] string
 ---@field [2] ?(fun(): nil)
 
@@ -45,6 +48,7 @@
 ---@field once ?boolean
 ---@field enabled ?boolean
 ---@field filetype ?string
+---@field pattern ?string
 ---@field buffer ?number
 ---@field priority ?number
 
@@ -102,6 +106,26 @@ local function is_callable(var)
 	end
 
 	return getmetatable(var) ~= nil and getmetatable(var).__call ~= nil
+end
+
+local function matches_pattern(pattern, filename)
+	if not pattern or not filename then
+		return false
+	end
+	
+	-- Convert shell-style pattern to lua pattern
+	local lua_pattern = pattern
+	
+	-- Escape lua special characters first
+	lua_pattern = lua_pattern:gsub("([%^%$%(%)%%%.%[%]%{%}%+%-%?])", "%%%1")
+	
+	-- Convert * to .* after escaping
+	lua_pattern = lua_pattern:gsub("%*", ".*")
+	
+	-- Add start and end anchors for exact matching
+	lua_pattern = "^" .. lua_pattern .. "$"
+	
+	return filename:match(lua_pattern) ~= nil
 end
 
 local function on_duplicate(keymaps, key, mode, config)
@@ -184,6 +208,7 @@ function M.create(opts, config)
 			callbacks = {},
 			desc = opts.desc,
 			filetype = opts.filetype,
+			pattern = opts.pattern,
 			mode = mode,
 			noremap = opts.noremap or false,
 			once = opts.once == true,
@@ -204,21 +229,22 @@ function M.create(opts, config)
 	end
 
 	---@type KeyMap
-	local keymap = {
-		id = id,
-		callbacks = {},
-		desc = opts.desc,
-		filetype = opts.filetype,
-		mode = mode,
-		noremap = opts.noremap or false,
-		once = opts.once == true,
-		wrapper = opts[2],
-		key = key,
-		enabled = true,
-		passthrough = opts.passthrough,
-		_registered = false,
-		condition = opts.condition,
-	}
+		local keymap = {
+			id = id,
+			callbacks = {},
+			desc = opts.desc,
+			filetype = opts.filetype,
+			pattern = opts.pattern,
+			mode = mode,
+			noremap = opts.noremap or false,
+			once = opts.once == true,
+			wrapper = opts[2],
+			key = key,
+			enabled = true,
+			passthrough = opts.passthrough,
+			_registered = false,
+			condition = opts.condition,
+		}
 
 	g_maps[id] = keymap
 	table.insert(g_mapsIds, id)
@@ -274,6 +300,13 @@ function M.invoke(keymap, ctx)
 
 		if callback.filetype and callback.filetype ~= vim.bo[buf].filetype then
 			goto continue
+		end
+
+		if callback.pattern then
+			local filename = vim.api.nvim_buf_get_name(buf)
+			if filename == "" or not matches_pattern(callback.pattern, vim.fn.fnamemodify(filename, ":t")) then
+				goto continue
+			end
 		end
 
 		local result = forwarder(ctx, keymap.wrapper, callback)
@@ -352,6 +385,7 @@ function M.pack(keymap)
 				desc = cb.desc,
 				enabled = cb.enabled,
 				filetype = cb.filetype,
+				pattern = cb.pattern,
 				name = cb.name,
 				once = cb.once,
 				handler = cb.handler,
@@ -414,6 +448,7 @@ function M.add_handler(keymap_id, handler, opts)
 		name = opts.name,
 		desc = opts.desc,
 		filetype = filetype,
+		pattern = opts.pattern,
 		once = once,
 		handler = theHandler,
 		buffer = opts.buffer,
@@ -525,6 +560,13 @@ function M.register(keymap_id)
 
 		if keymap.filetype and keymap.filetype ~= ft then
 			return
+		end
+
+		if keymap.pattern then
+			local filename = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+			if filename == "" or not matches_pattern(keymap.pattern, vim.fn.fnamemodify(filename, ":t")) then
+				return
+			end
 		end
 
 		local should_passthrough = false
