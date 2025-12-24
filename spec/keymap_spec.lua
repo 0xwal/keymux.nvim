@@ -887,6 +887,7 @@ describe("keymap", function()
 
 			assert.spy(cb).was_called(2)
 		end
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
 	end)
 
 	it("#17-2 can register to specific #pattern when defining", function()
@@ -930,6 +931,7 @@ describe("keymap", function()
 			assert.spy(cb1).was_called(1)
 			assert.spy(cb2).was_called(2)
 		end
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
 	end)
 
 	it("#17-3 can register to specific #pattern with wildcards", function()
@@ -970,6 +972,8 @@ describe("keymap", function()
 			assert.spy(cb1).was_called(1)
 			assert.spy(cb2).was_called(1)
 		end
+		vim.api.nvim_buf_delete(target_buffer1, { force = true })
+		vim.api.nvim_buf_delete(target_buffer2, { force = true })
 	end)
 
 	it("#17-4 pattern should not match when filename doesn't match", function()
@@ -995,7 +999,106 @@ describe("keymap", function()
 			assert.spy(cb1).was_called(0)
 			assert.spy(cb2).was_called(1)
 		end
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
 	end)
+
+	it("#17-5 pattern should match in anywhere of the filename when declaring handlers", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+			pattern = "*env*",
+		})
+
+		local cb1 = stub()
+		local cb2 = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/env/config.txt")
+
+		k(cb1)
+		k(cb2)
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(1)
+			assert.spy(cb2).was_called(1)
+		end
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
+	end)
+
+
+	it("#17-6 pattern should match in anywhere of the filename when defining handlers", function()
+		local k = M.k({
+			"ff",
+			desc = "a keymap",
+		})
+
+		local cb1 = stub()
+		local cb2 = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/env/config.txt")
+
+		k(cb1, { pattern = "*env*" })
+		k(cb2, { pattern = "*path*" })
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("ff", "x", true)
+			end)
+
+			assert.spy(cb1).was_called(1)
+			assert.spy(cb2).was_called(1)
+		end
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
+	end)
+
+	it("#17-8 should allow passthrough when using pattern and not matched", function()
+		local k = M.k({
+			"l",
+			desc = "a keymap",
+			pattern = "*env*",
+			passthrough = true,
+		})
+
+		local cb = stub()
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/xyz/config.txt")
+
+		k(cb)
+
+		vim.api.nvim_buf_set_lines(target_buffer, 0, -1, false, { "Hello, world!" })
+
+		local win = vim.api.nvim_open_win(target_buffer, true, {
+			relative = "editor",
+			width = 80,
+			height = 20,
+			col = 10,
+			row = 10,
+			style = "minimal",
+		})
+
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("l", "x", true)
+			end)
+
+			assert.spy(cb).was_called(0)
+		end
+
+		local cursor = vim.api.nvim_win_get_cursor(win)
+		assert.are.same({ 1, 1 }, cursor)
+		vim.api.nvim_win_close(win, { force = true })
+
+
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
+	end)
+
 
 	-- #endregion
 

@@ -112,15 +112,13 @@ local function matches_pattern(pattern, filename)
 	if not pattern or not filename then
 		return false
 	end
-	
+
 	local lua_pattern = pattern
-	
+
 	lua_pattern = lua_pattern:gsub("([%^%$%(%)%%%.%[%]%{%}%+%-%?])", "%%%1")
-	
+
 	lua_pattern = lua_pattern:gsub("%*", ".*")
-	
-	lua_pattern = "^" .. lua_pattern .. "$"
-	
+
 	return filename:match(lua_pattern) ~= nil
 end
 
@@ -133,6 +131,15 @@ local function on_duplicate(keymaps, key, mode, config)
 	local formatted_message = ("Duplicate keymap detected: %s (%s mode): %s"):format(key, mode, desc_list)
 
 	vim.notify(formatted_message, vim.log.levels.WARN)
+end
+
+local function is_current_buffer_match_pattern(pattern, buf)
+	buf = buf or vim.api.nvim_get_current_buf()
+	local filename = vim.api.nvim_buf_get_name(buf)
+	if filename == "" or not matches_pattern(pattern, filename) then
+		return false
+	end
+	return true
 end
 
 ---Detect duplicate keymaps for a given key and mode
@@ -196,51 +203,23 @@ function M.create(opts, config)
 		end
 	end
 
-	local all_same_keymaps = is_keymode_registered(keymode_identifier)
-	if all_same_keymaps then
-		---@type KeyMap
-		local keymap = {
-			id = id,
-			callbacks = {},
-			desc = opts.desc,
-			filetype = opts.filetype,
-			pattern = opts.pattern,
-			mode = mode,
-			noremap = opts.noremap or false,
-			once = opts.once == true,
-			wrapper = opts[2],
-			key = key,
-			enabled = true,
-			passthrough = opts.passthrough,
-			_registered = false,
-			condition = opts.condition,
-		}
-
-		g_maps[id] = keymap
-table.insert(g_maps_ids, id)
-
-table.insert(g_registered_keymode[keymode_identifier], id)
-
-		return keymap
-	end
-
 	---@type KeyMap
-		local keymap = {
-			id = id,
-			callbacks = {},
-			desc = opts.desc,
-			filetype = opts.filetype,
-			pattern = opts.pattern,
-			mode = mode,
-			noremap = opts.noremap or false,
-			once = opts.once == true,
-			wrapper = opts[2],
-			key = key,
-			enabled = true,
-			passthrough = opts.passthrough,
-			_registered = false,
-			condition = opts.condition,
-		}
+	local keymap = {
+		id = id,
+		callbacks = {},
+		desc = opts.desc,
+		filetype = opts.filetype,
+		pattern = opts.pattern,
+		mode = mode,
+		noremap = opts.noremap or false,
+		once = opts.once == true,
+		wrapper = opts[2],
+		key = key,
+		enabled = true,
+		passthrough = opts.passthrough,
+		_registered = false,
+		condition = opts.condition,
+	}
 
 	g_maps[id] = keymap
 	table.insert(g_maps_ids, id)
@@ -298,11 +277,8 @@ function M.invoke(keymap, ctx)
 			goto continue
 		end
 
-		if callback.pattern then
-			local filename = vim.api.nvim_buf_get_name(buf)
-			if filename == "" or not matches_pattern(callback.pattern, vim.fn.fnamemodify(filename, ":t")) then
-				goto continue
-			end
+		if callback.pattern and not is_current_buffer_match_pattern(callback.pattern, buf) then
+			goto continue
 		end
 
 		local result = forwarder(ctx, keymap.wrapper, callback)
@@ -516,7 +492,7 @@ function M.register(keymap_id)
 	local key = keymap.key
 	local mode = keymap.mode
 
-local keymode_identifier = make_identifier_for_keymode(key, mode)
+	local keymode_identifier = make_identifier_for_keymode(key, mode)
 
 	local registered_keymaps = vim.tbl_filter(function(keymap_id)
 		return g_maps[keymap_id]._registered
@@ -558,11 +534,11 @@ local keymode_identifier = make_identifier_for_keymode(key, mode)
 			return
 		end
 
-		if keymap.pattern then
-			local filename = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-			if filename == "" or not matches_pattern(keymap.pattern, vim.fn.fnamemodify(filename, ":t")) then
-				return
+		if keymap.pattern and not is_current_buffer_match_pattern(keymap.pattern) then
+			if keymap.passthrough then
+				vim.api.nvim_feedkeys(key, "n", false)
 			end
+			return
 		end
 
 		local should_passthrough = false
@@ -572,8 +548,8 @@ local keymode_identifier = make_identifier_for_keymode(key, mode)
 				M.invoke(the_keymap, ctx)
 			end
 
-if the_keymap.passthrough then
-			local passthrough_result = the_keymap.passthrough
+			if the_keymap.passthrough then
+				local passthrough_result = the_keymap.passthrough
 				should_passthrough = (type(passthrough_result) ~= "function") or passthrough_result()
 			end
 		end
