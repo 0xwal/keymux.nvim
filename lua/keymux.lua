@@ -1,4 +1,4 @@
-local keymapModule = require("keymap")
+local keymap_module = require("keymap")
 
 local M = {}
 
@@ -18,7 +18,7 @@ local config = {
 }
 
 M.inspect = function(key)
-	return keymapModule.resolve_all_keymap_by_key(key)
+	return keymap_module.resolve_all_keymap_by_key(key)
 end
 
 M.get = function(key)
@@ -30,10 +30,10 @@ function M.remove_keymaps(key, mode)
 	assert(type(key) == "string", "Expect key to be a string")
 	assert(type(mode) == "string", "Expect mode to be a string")
 
-	local keymaps = keymapModule.resolve_keymaps_by_keymod(key, mode)
+	local keymaps = keymap_module.resolve_keymaps_by_keymod(key, mode)
 
 	for _, keymap in ipairs(keymaps) do
-		keymapModule.remove_keymap(keymap.id)
+		keymap_module.remove_keymap(keymap.id)
 	end
 end
 
@@ -42,7 +42,7 @@ M.get_config = function()
 end
 
 M.detect_duplicates = function(mode, key)
-	return keymapModule.detect_duplicates(mode, key)
+	return keymap_module.detect_duplicates(mode, key)
 end
 
 M.k = function(opts)
@@ -50,7 +50,7 @@ M.k = function(opts)
 		return
 	end
 
-	local keymap = keymapModule.create(opts, config)
+	local keymap = keymap_module.create(opts, config)
 
 	return function(handler, extra)
 		if not handler then
@@ -60,47 +60,47 @@ M.k = function(opts)
 		end
 
 		if handler == "CLEAR" then
-			return keymapModule.remove_keymap(keymap.id)
+			return keymap_module.remove_keymap(keymap.id)
 		end
 
 		extra = extra or {}
 
-		local theHandler = (function()
+		local the_handler = (function()
 			if type(handler) == "string" and not handler:find("^[%:]") then
-				local theHandler = keymapModule.resolve_callback_by_name(keymap.id, handler)
-				assert(theHandler, ("Handler (%s) not found"):format(handler))
-				return theHandler
+				local the_handler = keymap_module.resolve_callback_by_name(keymap.id, handler)
+				assert(the_handler, ("Handler (%s) not found"):format(handler))
+				return the_handler
 			end
-			local callback = keymapModule.add_handler(keymap.id, handler, extra)
+			local callback = keymap_module.add_handler(keymap.id, handler, extra)
 			return callback
 		end)()
 
 		if not extra.defer then
-			keymapModule.register(keymap.id)
+			keymap_module.register(keymap.id)
 		end
 
 		return {
 			lazy_key = {
 				keymap.key,
 				function()
-					keymapModule.invoke(keymap)
+					keymap_module.invoke(keymap)
 				end,
 				desc = keymap.desc,
 				mode = keymap.mode,
 			},
 			del = function()
-				keymapModule.remove_handler(keymap.id, theHandler.id)
+				keymap_module.remove_handler(keymap.id, the_handler.id)
 			end,
 			reg = function()
-				keymapModule.add_handler(keymap.id, handler, extra)
-				keymapModule.register(keymap.id)
+				keymap_module.add_handler(keymap.id, handler, extra)
+				keymap_module.register(keymap.id)
 			end,
 			enable = function()
-				keymapModule.register(keymap.id)
-				theHandler.enabled = true
+				keymap_module.register(keymap.id)
+				the_handler.enabled = true
 			end,
 			disable = function()
-				theHandler.enabled = false
+				the_handler.enabled = false
 			end,
 		}
 	end
@@ -109,12 +109,12 @@ end
 M.clear_keymap = function(key)
 	assert(type(key) == "string", "Expect key to be a string")
 
-	local keymaps = keymapModule.resolve_all_keymap_by_key(key)
+	local keymaps = keymap_module.resolve_all_keymap_by_key(key)
 
 	assert(#keymaps > 0, ("Key (%s) not registered"):format(key))
 
 	for _, keymap in ipairs(keymaps) do
-		keymapModule.remove_keymap(keymap.id)
+		keymap_module.remove_keymap(keymap.id)
 	end
 end
 
@@ -139,7 +139,7 @@ function M.setup(opts)
 		callback = function(opts)
 			local buf = opts.buf
 
-			keymapModule.remove_callback_by_buffer(buf)
+			keymap_module.remove_callback_by_buffer(buf)
 		end,
 	})
 end

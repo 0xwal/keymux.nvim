@@ -56,7 +56,7 @@
 local g_maps = {}
 
 ---@type string[]
-local g_mapsIds = {}
+local g_maps_ids = {}
 
 ---@type table<string, string[]>
 local g_registered_keymode = {}
@@ -79,7 +79,7 @@ local function make_identifier_for_keymode(key, mode)
 	return identifier
 end
 
-local function canRun(keymap)
+local function can_run(keymap)
 	if not keymap.condition then
 		return true
 	end
@@ -113,16 +113,12 @@ local function matches_pattern(pattern, filename)
 		return false
 	end
 	
-	-- Convert shell-style pattern to lua pattern
 	local lua_pattern = pattern
 	
-	-- Escape lua special characters first
 	lua_pattern = lua_pattern:gsub("([%^%$%(%)%%%.%[%]%{%}%+%-%?])", "%%%1")
 	
-	-- Convert * to .* after escaping
 	lua_pattern = lua_pattern:gsub("%*", ".*")
 	
-	-- Add start and end anchors for exact matching
 	lua_pattern = "^" .. lua_pattern .. "$"
 	
 	return filename:match(lua_pattern) ~= nil
@@ -144,8 +140,8 @@ end
 ---@param key string
 ---@return KeyMap[] Array of duplicate keymaps (including existing ones), or empty table if no duplicates
 function M.detect_duplicates(mode, key)
-	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
-	local existing_keymaps = g_registered_keymode[keymodeIdentifier]
+	local keymode_identifier = make_identifier_for_keymode(key, mode)
+	local existing_keymaps = g_registered_keymode[keymode_identifier]
 
 	if not existing_keymaps or #existing_keymaps == 0 then
 		return {}
@@ -177,7 +173,7 @@ function M.create(opts, config)
 	local mode = opts.mode or "n"
 	local key = opts[1]
 
-	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
+	local keymode_identifier = make_identifier_for_keymode(key, mode)
 
 	local id = ("%s-%s-%s"):format(vim.inspect(mode), key, make_id())
 
@@ -200,8 +196,8 @@ function M.create(opts, config)
 		end
 	end
 
-	local allSameKeymaps = is_keymode_registered(keymodeIdentifier)
-	if allSameKeymaps then
+	local all_same_keymaps = is_keymode_registered(keymode_identifier)
+	if all_same_keymaps then
 		---@type KeyMap
 		local keymap = {
 			id = id,
@@ -221,9 +217,9 @@ function M.create(opts, config)
 		}
 
 		g_maps[id] = keymap
-		table.insert(g_mapsIds, id)
+table.insert(g_maps_ids, id)
 
-		table.insert(g_registered_keymode[keymodeIdentifier], id)
+table.insert(g_registered_keymode[keymode_identifier], id)
 
 		return keymap
 	end
@@ -247,13 +243,13 @@ function M.create(opts, config)
 		}
 
 	g_maps[id] = keymap
-	table.insert(g_mapsIds, id)
+	table.insert(g_maps_ids, id)
 
-	if not g_registered_keymode[keymodeIdentifier] then
-		g_registered_keymode[keymodeIdentifier] = {}
+	if not g_registered_keymode[keymode_identifier] then
+		g_registered_keymode[keymode_identifier] = {}
 	end
 
-	table.insert(g_registered_keymode[keymodeIdentifier], id)
+	table.insert(g_registered_keymode[keymode_identifier], id)
 
 	return keymap
 end
@@ -283,7 +279,7 @@ function M.invoke(keymap, ctx)
 	local buf = vim.api.nvim_get_current_buf()
 	--TODO: Ensure __index?
 
-	local toRemove = {}
+	local to_remove = {}
 
 	table.sort(keymap.callbacks, function(a, b)
 		return a.priority > b.priority
@@ -312,7 +308,7 @@ function M.invoke(keymap, ctx)
 		local result = forwarder(ctx, keymap.wrapper, callback)
 
 		if callback.once then
-			table.insert(toRemove, callback)
+			table.insert(to_remove, callback)
 		end
 
 		if result == true then
@@ -322,7 +318,7 @@ function M.invoke(keymap, ctx)
 		::continue::
 	end
 
-	for _, callback in ipairs(toRemove) do
+	for _, callback in ipairs(to_remove) do
 		M.remove_handler(keymap.id, callback.id)
 	end
 
@@ -335,7 +331,7 @@ end
 function M.resolve_all_keymap_by_key(key)
 	local out = {}
 
-	for _, index in pairs(g_mapsIds) do
+	for _, index in pairs(g_maps_ids) do
 		local keymap = g_maps[index]
 		if keymap.key == key then
 			local packed = M.pack(keymap)
@@ -348,21 +344,21 @@ end
 
 ---@param buf number
 function M.remove_callback_by_buffer(buf)
-	---@type {keymap: KeyMap, callbacks: Callback[]}
+	---@type {keymap: KeyMap, callback: Callback[]}
 	local to_remove = {}
 	for _, map in pairs(g_maps) do
 		for _, cb in ipairs(map.callbacks) do
 			if cb.buffer == buf then
 				table.insert(to_remove, {
 					keymap = map,
-					callbacks = cb,
+					callback = cb,
 				})
 			end
 		end
 	end
 
 	for _, item in ipairs(to_remove) do
-		local map, callback = item.keymap, item.callbacks
+		local map, callback = item.keymap, item.callback
 		M.remove_handler(map.id, callback.id)
 	end
 end
@@ -401,19 +397,19 @@ function M.remove_keymap(keymap_id)
 		return
 	end
 
-	local keymodeIdentifier = make_identifier_for_keymode(map.key, map.mode)
+	local keymode_identifier = make_identifier_for_keymode(map.key, map.mode)
 
-	local sharedKeymode = g_registered_keymode[keymodeIdentifier]
+	local shared_keymode = g_registered_keymode[keymode_identifier]
 
-	for id, keymodeId in ipairs(g_registered_keymode[keymodeIdentifier]) do
-		if keymodeId == map.id then
-			table.remove(g_registered_keymode[keymodeIdentifier], id)
+	for id, keymode_id in ipairs(g_registered_keymode[keymode_identifier]) do
+		if keymode_id == map.id then
+			table.remove(g_registered_keymode[keymode_identifier], id)
 			map.callbacks = {}
 			break
 		end
 	end
 
-	if #sharedKeymode > 0 then
+	if #shared_keymode > 0 then
 		return
 	end
 
@@ -434,7 +430,7 @@ function M.add_handler(keymap_id, handler, opts)
 
 	local index = #keymap.callbacks + 1
 
-	local theHandler = is_callable(handler) and handler or function()
+	local the_handler = is_callable(handler) and handler or function()
 		vim.cmd(handler)
 	end
 
@@ -450,7 +446,7 @@ function M.add_handler(keymap_id, handler, opts)
 		filetype = filetype,
 		pattern = opts.pattern,
 		once = once,
-		handler = theHandler,
+		handler = the_handler,
 		buffer = opts.buffer,
 		enabled = (opts.enabled == nil) or (opts.enabled == true),
 		priority = opts.priority or 0,
@@ -492,13 +488,13 @@ function M.remove_handler(keymap_id, handler_id)
 end
 
 function M.resolve_keymaps_by_keymod(key, mode)
-	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
+	local keymode_identifier = make_identifier_for_keymode(key, mode)
 
-	if not g_registered_keymode[keymodeIdentifier] then
+	if not g_registered_keymode[keymode_identifier] then
 		return
 	end
 
-	local keymap_ids = g_registered_keymode[keymodeIdentifier]
+	local keymap_ids = g_registered_keymode[keymode_identifier]
 
 	local out = {}
 
@@ -520,15 +516,15 @@ function M.register(keymap_id)
 	local key = keymap.key
 	local mode = keymap.mode
 
-	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
+local keymode_identifier = make_identifier_for_keymode(key, mode)
 
-	local registered_keymaps = vim.tbl_filter(function(keymapId)
-		return g_maps[keymapId]._registered
-	end, is_keymode_registered(keymodeIdentifier))
+	local registered_keymaps = vim.tbl_filter(function(keymap_id)
+		return g_maps[keymap_id]._registered
+	end, is_keymode_registered(keymode_identifier))
 
 	if #registered_keymaps > 0 then
-		if not vim.list_contains(g_registered_keymode[keymodeIdentifier], keymap.id) then
-			table.insert(g_registered_keymode[keymodeIdentifier], keymap.id)
+		if not vim.list_contains(g_registered_keymode[keymode_identifier], keymap.id) then
+			table.insert(g_registered_keymode[keymode_identifier], keymap.id)
 		end
 
 		return
@@ -539,10 +535,10 @@ function M.register(keymap_id)
 	local key = keymap.key
 	local mode = keymap.mode
 
-	local keymodeIdentifier = make_identifier_for_keymode(key, mode)
+	local keymode_identifier = make_identifier_for_keymode(key, mode)
 
-	if not vim.list_contains(g_registered_keymode[keymodeIdentifier], keymap.id) then
-		table.insert(g_registered_keymode[keymodeIdentifier], keymap.id)
+	if not vim.list_contains(g_registered_keymode[keymode_identifier], keymap.id) then
+		table.insert(g_registered_keymode[keymode_identifier], keymap.id)
 	end
 
 	local opts = {
@@ -554,7 +550,7 @@ function M.register(keymap_id)
 	local ctx = {}
 
 	vim.keymap.set(mode, key, function()
-		local keymapIds = g_registered_keymode[keymodeIdentifier]
+		local keymap_ids = g_registered_keymode[keymode_identifier]
 
 		local ft = vim.bo.filetype
 
@@ -570,14 +566,14 @@ function M.register(keymap_id)
 		end
 
 		local should_passthrough = false
-		for _, keymapId in ipairs(keymapIds) do
-			local theKeymap = M.resolve(keymapId)
-			if canRun(theKeymap) then
-				M.invoke(theKeymap, ctx)
+		for _, keymap_id in ipairs(keymap_ids) do
+			local the_keymap = M.resolve(keymap_id)
+			if can_run(the_keymap) then
+				M.invoke(the_keymap, ctx)
 			end
 
-			if theKeymap.passthrough then
-				local passthrough_result = theKeymap.passthrough
+if the_keymap.passthrough then
+			local passthrough_result = the_keymap.passthrough
 				should_passthrough = (type(passthrough_result) ~= "function") or passthrough_result()
 			end
 		end
