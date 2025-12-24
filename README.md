@@ -68,11 +68,9 @@ For example, `<M-]>` triggers supermaven first; if the suggestion isn't good, pr
 ## Features
 
 - **Multiplex handlers**: One key can trigger multiple handlers
-- **Conditional execution**: Filetype, buffer, and priority-based handlers
+- **Conditional execution**: Filetype, pattern, buffer, priority, and condition-based handlers
 - **Context sharing**: Pass data between handlers
-- **Duplicate warnings**: Configurable warnings for duplicate keymap declarations
-- **Safe registration**: Warns about conflicting keymaps
-- **Dynamic conditions**: Enable/disable keymaps based on global state
+- **Duplicate detection**: Configurable warnings for conflicting keymaps
 - **Passthrough**: Execute original key behavior alongside custom handlers
 
 ## Documentation
