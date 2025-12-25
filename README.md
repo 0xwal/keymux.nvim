@@ -83,12 +83,16 @@ Type `:help keymux` to view full documentation in Vim.
 {
   "0xWal/keymux.nvim",
   priority = 1000,
+  config = false, -- we use `init` for now to ensure it loaded before other plugins `config`
   init = function()
     require("keymux").setup({
       duplicate = {
         detect = true,
       },
     })
+
+    --- ... declare your keys
+    --- ex: require("keys")
   end,
 }
 ```
