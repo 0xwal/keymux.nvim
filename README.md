@@ -206,7 +206,7 @@ Creates a new keymap declaration.
 | `[1]` | `string` | No | The key sequence |
 | `desc` | `string` | No | Description for the keymap |
 | `mode` | `string\|table` | Yes | Vim mode(s) (default: `"n"`) |
-| `filetype` | `string` | Yes | Filetype to restrict keymap to |
+| `filetype` | `string\|string[]` | Yes | Filetype(s) to restrict keymap to (single string or array of strings) |
 | `pattern` | `string` | Yes | File pattern to restrict keymap to (supports `*` wildcards) |
 | `noremap` | `boolean` | Yes | Don't remap (default: `false`) |
 | `once` | `boolean` | Yes | Remove after first execution |
@@ -220,7 +220,7 @@ local keymap = keymux.k {
   "<leader>x",           ---@field [1] string The key sequence
   desc = "Description", ---@field desc string Description for the keymap
   mode = "n",           ---@field mode? string|table Vim mode(s) (default: "n")
-  filetype = "lua",     ---@field filetype? string Filetype to restrict keymap to
+  filetype = "lua",     ---@field filetype? string|string[] Filetype(s) to restrict keymap to (single string or array of strings)
   pattern = ".env*",     ---@field pattern? string File pattern to restrict keymap to (supports * wildcards)
   once = true,          ---@field once? boolean Remove after first execution
   noremap = false,      ---@field noremap? boolean Don't remap (default: false)
@@ -242,7 +242,7 @@ end, {
   name = "handler-name",   ---@field name? string Unique name for the handler
   desc = "Handler desc",   ---@field desc? string Description for the handler
   priority = 100,          ---@field priority? number Higher numbers run first (default: 0)
-  filetype = "lua",        ---@field filetype? string Restrict to specific filetype
+  filetype = "lua",        ---@field filetype? string|string[] Restrict to specific filetype(s) (single string or array of strings)
   buffer = 0,              ---@field buffer? number Restrict to specific buffer
   once = true,             ---@field once? boolean Remove after first execution
   defer = false,            ---@field defer? boolean Don't execute immediately on creation
@@ -256,7 +256,7 @@ end, {
 | `name` | `string` | Yes | Unique name for the handler |
 | `desc` | `string` | Yes | Description for the handler |
 | `priority` | `number` | Yes | Higher numbers run first (default: `0`) |
-| `filetype` | `string` | Yes | Restrict to specific filetype |
+| `filetype` | `string\|string[]` | Yes | Restrict to specific filetype(s) (single string or array of strings) |
 | `pattern` | `string` | Yes | Restrict to specific file pattern (supports `*` wildcards) |
 | `buffer` | `number` | Yes | Restrict to specific buffer |
 | `once` | `boolean` | Yes | Remove after first execution |
@@ -279,15 +279,22 @@ handler.del()      -- remove handler
 ```lua
 _G.run_code = keymux.k { "<leader>r", desc = "Run code" }
 
--- Lua files
+-- Single filetype
 run_code(function()
   vim.cmd("source %")
 end, { filetype = "lua" })
 
--- Python files
+-- Another single filetype
 run_code(function()
   vim.cmd("!python %")
 end, { filetype = "python" })
+
+-- Multiple filetypes using array
+_G.test_runner = keymux.k { "<leader>t", desc = "Run tests", filetype = { "javascript", "typescript", "python" } }
+
+test_runner(function()
+    print(vim.bo.filetype)
+end)  -- Runs for JavaScript, TypeScript, and Python files
 ```
 
 ### Pattern-specific handlers

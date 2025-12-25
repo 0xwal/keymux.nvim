@@ -84,7 +84,7 @@ KeyMapOptionsArg ~
     [1] (string)         The key sequence
     desc (string)         Description for the keymap
     mode (string|table)   Vim mode(s) (default: "n")
-    filetype (string)      Filetype to restrict keymap to
+    filetype (string|string[])      Filetype(s) to restrict keymap to (single string or array of strings)
     noremap (boolean)     Don't remap (default: false)
     once (boolean)        Remove after first execution
     silent (boolean)       Silent execution (default: true)
@@ -98,7 +98,7 @@ CallbackOptionsArg ~
     name (string)         Unique name for the handler
     desc (string)         Description for the handler
     priority (number)      Higher numbers run first (default: 0)
-    filetype (string)      Restrict to specific filetype
+    filetype (string|string[])      Restrict to specific filetype(s) (single string or array of strings)
     buffer (number)       Restrict to specific buffer
     once (boolean)        Remove after first execution
     defer (boolean)        Don't execute immediately on creation
@@ -137,15 +137,22 @@ FILETYPE-SPECIFIC HANDLERS                   *keymux-examples-filetype*
     
     _G.run_code = keymux.k { "<leader>r", desc = "Run code" }
     
-    -- Lua files
+    -- Single filetype
     run_code(function()
         vim.cmd("source %")
     end, { filetype = "lua" })
     
-    -- Python files
+    -- Another single filetype
     run_code(function()
         vim.cmd("!python %")
     end, { filetype = "python" })
+    
+    -- Multiple filetypes using array
+    _G.test_runner = keymux.k { "<leader>t", desc = "Run tests", filetype = { "javascript", "typescript", "python" } }
+    
+    test_runner(function()
+        vim.cmd("!npm test")
+    end)  -- Runs for JavaScript, TypeScript, and Python files
 
 PRIORITY ORDERING                               *keymux-examples-priority*
 

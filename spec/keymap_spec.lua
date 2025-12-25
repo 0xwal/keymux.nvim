@@ -546,6 +546,163 @@ describe("keymap", function()
 	-- #endregion
 
 	-- #region test case
+	describe("filetype arrays", function()
+		it("can register to specific #filetype array when declaring", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+				filetype = { "rust", "python" },
+			})
+
+			local cb = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local python_buffer = vim.api.nvim_create_buf(false, false)
+			local js_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "python", { buf = python_buffer })
+			vim.api.nvim_set_option_value("filetype", "javascript", { buf = js_buffer })
+
+			k(cb)
+
+			do -- check if called for rust buffer
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- check if called for python buffer
+				vim.api.nvim_buf_call(python_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- check if not called for javascript buffer
+				vim.api.nvim_buf_call(js_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(python_buffer, { force = true })
+			vim.api.nvim_buf_delete(js_buffer, { force = true })
+		end)
+
+		it("can register to specific #filetype array when defining", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+			})
+
+			local cb1 = stub()
+			local cb2 = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local python_buffer = vim.api.nvim_create_buf(false, false)
+			local js_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "python", { buf = python_buffer })
+			vim.api.nvim_set_option_value("filetype", "javascript", { buf = js_buffer })
+
+			k(cb1, { filetype = { "rust", "python" } })
+			k(cb2)
+
+			do -- rust buffer should trigger both callbacks
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(1)
+				assert.spy(cb2).was_called(1)
+			end
+
+			cb1:clear()
+			cb2:clear()
+
+			do -- python buffer should trigger both callbacks
+				vim.api.nvim_buf_call(python_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(1)
+				assert.spy(cb2).was_called(1)
+			end
+
+			cb1:clear()
+			cb2:clear()
+
+			do -- javascript buffer should only trigger cb2
+				vim.api.nvim_buf_call(js_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(0)
+				assert.spy(cb2).was_called(1)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(python_buffer, { force = true })
+			vim.api.nvim_buf_delete(js_buffer, { force = true })
+		end)
+
+		it("can mix string and array filetype declarations", function()
+			local k1 = M.k({
+				"ff",
+				desc = "keymap with string filetype",
+				filetype = "rust",
+			})
+
+			local k2 = M.k({
+				"ff",
+				desc = "keymap with array filetype",
+				filetype = { "python", "javascript" },
+			})
+
+			local cb1 = stub()
+			local cb2 = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local python_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "python", { buf = python_buffer })
+
+			k1(cb1)
+			k2(cb2)
+
+			do -- rust buffer should only trigger cb1
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(1)
+				assert.spy(cb2).was_called(0)
+			end
+
+			cb1:clear()
+			cb2:clear()
+
+			do -- python buffer should only trigger cb2
+				vim.api.nvim_buf_call(python_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(0)
+				assert.spy(cb2).was_called(1)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(python_buffer, { force = true })
+		end)
+	end)
+
+	-- #endregion
+
+	-- #region test case
 	-- it("#11-1 error when declaring multiple keymap with same key", function()
 	-- 	M.k({
 	-- 		"y7",

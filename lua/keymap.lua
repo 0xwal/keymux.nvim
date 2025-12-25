@@ -9,7 +9,7 @@
 ---@field once boolean
 ---@field silent boolean
 ---@field callbacks Callback[]
----@field filetype string
+---@field filetype string|string[]
 ---@field pattern string
 ---@field condition fun(): boolean
 ---@field passthrough boolean|fun(): boolean
@@ -21,7 +21,7 @@
 ---@field id string
 ---@field desc string
 ---@field once boolean
----@field filetype string
+---@field filetype string|string[]
 ---@field pattern string
 ---@field handler HandlerFn
 ---@field enabled boolean
@@ -37,7 +37,7 @@
 ---@field passthrough ?boolean|fun(): boolean
 ---@field condition fun(): boolean
 ---@field silent ?boolean
----@field filetype ?string
+---@field filetype ?string|string[]
 ---@field pattern ?string
 ---@field [1] string
 ---@field [2] ?(fun(): nil)
@@ -47,7 +47,7 @@
 ---@field desc ?string
 ---@field once ?boolean
 ---@field enabled ?boolean
----@field filetype ?string
+---@field filetype ?string|string[]
 ---@field pattern ?string
 ---@field buffer ?number
 ---@field priority ?number
@@ -120,6 +120,25 @@ local function matches_pattern(pattern, filename)
 	lua_pattern = lua_pattern:gsub("%*", ".*")
 
 	return filename:match(lua_pattern) ~= nil
+end
+
+---@param filetype_config string|string[]|nil
+---@param current_filetype string
+---@return boolean
+local function matches_filetype(filetype_config, current_filetype)
+	if not filetype_config then
+		return true
+	end
+	
+	if type(filetype_config) == "string" then
+		return filetype_config == current_filetype
+	end
+	
+	if type(filetype_config) == "table" then
+		return vim.list_contains(filetype_config, current_filetype)
+	end
+	
+	return false
 end
 
 local function on_duplicate(keymaps, key, mode, config)
@@ -273,7 +292,7 @@ function M.invoke(keymap, ctx)
 			goto continue
 		end
 
-		if callback.filetype and callback.filetype ~= vim.bo[buf].filetype then
+		if not matches_filetype(callback.filetype, vim.bo[buf].filetype) then
 			goto continue
 		end
 
@@ -530,20 +549,21 @@ function M.register(keymap_id)
 
 		local ft = vim.bo.filetype
 
-		if keymap.filetype and keymap.filetype ~= ft then
-			return
-		end
-
-		if keymap.pattern and not is_current_buffer_match_pattern(keymap.pattern) then
-			if keymap.passthrough then
-				vim.api.nvim_feedkeys(key, "n", false)
-			end
-			return
-		end
-
 		local should_passthrough = false
 		for _, keymap_id in ipairs(keymap_ids) do
 			local the_keymap = M.resolve(keymap_id)
+			
+			if not matches_filetype(the_keymap.filetype, ft) then
+				goto continue
+			end
+
+			if the_keymap.pattern and not is_current_buffer_match_pattern(the_keymap.pattern) then
+				if the_keymap.passthrough then
+					vim.api.nvim_feedkeys(key, "n", false)
+				end
+				goto continue
+			end
+			
 			if can_run(the_keymap) then
 				M.invoke(the_keymap, ctx)
 			end
@@ -552,6 +572,8 @@ function M.register(keymap_id)
 				local passthrough_result = the_keymap.passthrough
 				should_passthrough = (type(passthrough_result) ~= "function") or passthrough_result()
 			end
+			
+			::continue::
 		end
 
 		if should_passthrough then
