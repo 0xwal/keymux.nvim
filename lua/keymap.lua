@@ -10,6 +10,7 @@
 ---@field silent boolean
 ---@field callbacks Callback[]
 ---@field filetype string|string[]
+---@field ignore_filetype string|string[]
 ---@field pattern string
 ---@field condition fun(): boolean
 ---@field passthrough boolean|fun(): boolean
@@ -22,6 +23,7 @@
 ---@field desc string
 ---@field once boolean
 ---@field filetype string|string[]
+---@field ignore_filetype string|string[]
 ---@field pattern string
 ---@field handler HandlerFn
 ---@field enabled boolean
@@ -38,6 +40,7 @@
 ---@field condition fun(): boolean
 ---@field silent ?boolean
 ---@field filetype ?string|string[]
+---@field ignore_filetype ?string|string[]
 ---@field pattern ?string
 ---@field [1] string
 ---@field [2] ?(fun(): nil)
@@ -48,6 +51,7 @@
 ---@field once ?boolean
 ---@field enabled ?boolean
 ---@field filetype ?string|string[]
+---@field ignore_filetype ?string|string[]
 ---@field pattern ?string
 ---@field buffer ?number
 ---@field priority ?number
@@ -141,6 +145,39 @@ local function matches_filetype(filetype_config, current_filetype)
 	return false
 end
 
+---@param ignore_filetype_config string|string[]|nil
+---@param current_filetype string
+---@return boolean
+local function should_ignore_filetype(ignore_filetype_config, current_filetype)
+	if not ignore_filetype_config then
+		return false
+	end
+	
+	if type(ignore_filetype_config) == "string" then
+		return ignore_filetype_config == current_filetype
+	end
+	
+	if type(ignore_filetype_config) == "table" then
+		return vim.list_contains(ignore_filetype_config, current_filetype)
+	end
+	
+	return false
+end
+
+---@param filetype_config string|string[]|nil
+---@param ignore_filetype_config string|string[]|nil
+---@param current_filetype string
+---@return boolean
+local function matches_filetype_with_ignore(filetype_config, ignore_filetype_config, current_filetype)
+	-- First check if current filetype should be ignored
+	if should_ignore_filetype(ignore_filetype_config, current_filetype) then
+		return false
+	end
+	
+	-- Then check if current filetype matches the allowed filetypes
+	return matches_filetype(filetype_config, current_filetype)
+end
+
 local function on_duplicate(keymaps, key, mode, config)
 	local descs = {}
 	for _, keymap in ipairs(keymaps) do
@@ -228,6 +265,7 @@ function M.create(opts, config)
 		callbacks = {},
 		desc = opts.desc,
 		filetype = opts.filetype,
+		ignore_filetype = opts.ignore_filetype,
 		pattern = opts.pattern,
 		mode = mode,
 		noremap = opts.noremap or false,
@@ -292,7 +330,7 @@ function M.invoke(keymap, ctx)
 			goto continue
 		end
 
-		if not matches_filetype(callback.filetype, vim.bo[buf].filetype) then
+		if not matches_filetype_with_ignore(callback.filetype, callback.ignore_filetype, vim.bo[buf].filetype) then
 			goto continue
 		end
 
@@ -430,6 +468,7 @@ function M.add_handler(keymap_id, handler, opts)
 	end
 
 	local filetype = keymap.filetype or opts.filetype
+	local ignore_filetype = keymap.ignore_filetype or opts.ignore_filetype
 	local once = (keymap.once ~= nil) and keymap.once or opts.once
 
 	---@type Callback
@@ -439,6 +478,7 @@ function M.add_handler(keymap_id, handler, opts)
 		name = opts.name,
 		desc = opts.desc,
 		filetype = filetype,
+		ignore_filetype = ignore_filetype,
 		pattern = opts.pattern,
 		once = once,
 		handler = the_handler,
@@ -553,7 +593,7 @@ function M.register(keymap_id)
 		for _, keymap_id in ipairs(keymap_ids) do
 			local the_keymap = M.resolve(keymap_id)
 			
-			if not matches_filetype(the_keymap.filetype, ft) then
+			if not matches_filetype_with_ignore(the_keymap.filetype, the_keymap.ignore_filetype, ft) then
 				goto continue
 			end
 

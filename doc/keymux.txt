@@ -85,6 +85,7 @@ KeyMapOptionsArg ~
     desc (string)         Description for the keymap
     mode (string|table)   Vim mode(s) (default: "n")
     filetype (string|string[])      Filetype(s) to restrict keymap to (single string or array of strings)
+    ignore_filetype (string|string[])  Filetype(s) to exclude from keymap (single string or array of strings)
     noremap (boolean)     Don't remap (default: false)
     once (boolean)        Remove after first execution
     silent (boolean)       Silent execution (default: true)
@@ -99,6 +100,7 @@ CallbackOptionsArg ~
     desc (string)         Description for the handler
     priority (number)      Higher numbers run first (default: 0)
     filetype (string|string[])      Restrict to specific filetype(s) (single string or array of strings)
+    ignore_filetype (string|string[])  Exclude specific filetype(s) (single string or array of strings)
     buffer (number)       Restrict to specific buffer
     once (boolean)        Remove after first execution
     defer (boolean)        Don't execute immediately on creation
@@ -153,6 +155,13 @@ FILETYPE-SPECIFIC HANDLERS                   *keymux-examples-filetype*
     test_runner(function()
         vim.cmd("!npm test")
     end)  -- Runs for JavaScript, TypeScript, and Python files
+
+-- Exclude specific filetypes
+    _G.smart_save = keymux.k { "<leader>s", desc = "Smart save", ignore_filetype = { "markdown", "text" } }
+    
+    smart_save(function()
+        vim.cmd("write")
+    end)  -- Runs for all filetypes except markdown and text
 
 PRIORITY ORDERING                               *keymux-examples-priority*
 

@@ -700,6 +700,197 @@ describe("keymap", function()
 		end)
 	end)
 
+	describe("ignore filetype", function()
+		it("can use #ignore_filetype with string when declaring", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+				ignore_filetype = "markdown",
+			})
+
+			local cb = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local markdown_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "markdown", { buf = markdown_buffer })
+
+			k(cb)
+
+			do -- rust buffer should trigger callback
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- markdown buffer should not trigger callback
+				vim.api.nvim_buf_call(markdown_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(markdown_buffer, { force = true })
+		end)
+
+		it("can use #ignore_filetype with array when declaring", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+				ignore_filetype = { "markdown", "text" },
+			})
+
+			local cb = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local markdown_buffer = vim.api.nvim_create_buf(false, false)
+			local text_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "markdown", { buf = markdown_buffer })
+			vim.api.nvim_set_option_value("filetype", "text", { buf = text_buffer })
+
+			k(cb)
+
+			do -- rust buffer should trigger callback
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- markdown buffer should not trigger callback
+				vim.api.nvim_buf_call(markdown_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			cb:clear()
+
+			do -- text buffer should not trigger callback
+				vim.api.nvim_buf_call(text_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(markdown_buffer, { force = true })
+			vim.api.nvim_buf_delete(text_buffer, { force = true })
+		end)
+
+		it("can use #ignore_filetype with string when defining", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+			})
+
+			local cb1 = stub()
+			local cb2 = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local markdown_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "markdown", { buf = markdown_buffer })
+
+			k(cb1, { ignore_filetype = "markdown" })
+			k(cb2)
+
+			do -- rust buffer should trigger both callbacks
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(1)
+				assert.spy(cb2).was_called(1)
+			end
+
+			cb1:clear()
+			cb2:clear()
+
+			do -- markdown buffer should only trigger cb2
+				vim.api.nvim_buf_call(markdown_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb1).was_called(0)
+				assert.spy(cb2).was_called(1)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(markdown_buffer, { force = true })
+		end)
+
+		it("can combine #filetype and #ignore_filetype", function()
+			local k = M.k({
+				"ff",
+				desc = "a keymap",
+				filetype = { "rust", "python", "javascript" },
+				ignore_filetype = "javascript",
+			})
+
+			local cb = stub()
+
+			local rust_buffer = vim.api.nvim_create_buf(false, false)
+			local python_buffer = vim.api.nvim_create_buf(false, false)
+			local js_buffer = vim.api.nvim_create_buf(false, false)
+			local markdown_buffer = vim.api.nvim_create_buf(false, false)
+
+			vim.api.nvim_set_option_value("filetype", "rust", { buf = rust_buffer })
+			vim.api.nvim_set_option_value("filetype", "python", { buf = python_buffer })
+			vim.api.nvim_set_option_value("filetype", "javascript", { buf = js_buffer })
+			vim.api.nvim_set_option_value("filetype", "markdown", { buf = markdown_buffer })
+
+			k(cb)
+
+			do -- rust buffer should trigger callback (in filetype, not ignored)
+				vim.api.nvim_buf_call(rust_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- python buffer should trigger callback (in filetype, not ignored)
+				vim.api.nvim_buf_call(python_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(1)
+			end
+
+			cb:clear()
+
+			do -- javascript buffer should not trigger callback (in filetype but ignored)
+				vim.api.nvim_buf_call(js_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			cb:clear()
+
+			do -- markdown buffer should not trigger callback (not in filetype)
+				vim.api.nvim_buf_call(markdown_buffer, function()
+					vim.api.nvim_feedkeys("ff", "x", true)
+				end)
+				assert.spy(cb).was_called(0)
+			end
+
+			vim.api.nvim_buf_delete(rust_buffer, { force = true })
+			vim.api.nvim_buf_delete(python_buffer, { force = true })
+			vim.api.nvim_buf_delete(js_buffer, { force = true })
+			vim.api.nvim_buf_delete(markdown_buffer, { force = true })
+		end)
+	end)
+
 	-- #endregion
 
 	-- #region test case

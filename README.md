@@ -207,6 +207,7 @@ Creates a new keymap declaration.
 | `desc` | `string` | No | Description for the keymap |
 | `mode` | `string\|table` | Yes | Vim mode(s) (default: `"n"`) |
 | `filetype` | `string\|string[]` | Yes | Filetype(s) to restrict keymap to (single string or array of strings) |
+| `ignore_filetype` | `string\|string[]` | Yes | Filetype(s) to exclude from keymap (single string or array of strings) |
 | `pattern` | `string` | Yes | File pattern to restrict keymap to (supports `*` wildcards) |
 | `noremap` | `boolean` | Yes | Don't remap (default: `false`) |
 | `once` | `boolean` | Yes | Remove after first execution |
@@ -221,6 +222,7 @@ local keymap = keymux.k {
   desc = "Description", ---@field desc string Description for the keymap
   mode = "n",           ---@field mode? string|table Vim mode(s) (default: "n")
   filetype = "lua",     ---@field filetype? string|string[] Filetype(s) to restrict keymap to (single string or array of strings)
+  ignore_filetype = "markdown", ---@field ignore_filetype? string|string[] Filetype(s) to exclude from keymap (single string or array of strings)
   pattern = ".env*",     ---@field pattern? string File pattern to restrict keymap to (supports * wildcards)
   once = true,          ---@field once? boolean Remove after first execution
   noremap = false,      ---@field noremap? boolean Don't remap (default: false)
@@ -243,6 +245,7 @@ end, {
   desc = "Handler desc",   ---@field desc? string Description for the handler
   priority = 100,          ---@field priority? number Higher numbers run first (default: 0)
   filetype = "lua",        ---@field filetype? string|string[] Restrict to specific filetype(s) (single string or array of strings)
+  ignore_filetype = "markdown", ---@field ignore_filetype? string|string[] Exclude specific filetype(s) (single string or array of strings)
   buffer = 0,              ---@field buffer? number Restrict to specific buffer
   once = true,             ---@field once? boolean Remove after first execution
   defer = false,            ---@field defer? boolean Don't execute immediately on creation
@@ -257,6 +260,7 @@ end, {
 | `desc` | `string` | Yes | Description for the handler |
 | `priority` | `number` | Yes | Higher numbers run first (default: `0`) |
 | `filetype` | `string\|string[]` | Yes | Restrict to specific filetype(s) (single string or array of strings) |
+| `ignore_filetype` | `string\|string[]` | Yes | Exclude specific filetype(s) (single string or array of strings) |
 | `pattern` | `string` | Yes | Restrict to specific file pattern (supports `*` wildcards) |
 | `buffer` | `number` | Yes | Restrict to specific buffer |
 | `once` | `boolean` | Yes | Remove after first execution |
@@ -295,6 +299,29 @@ _G.test_runner = keymux.k { "<leader>t", desc = "Run tests", filetype = { "javas
 test_runner(function()
     print(vim.bo.filetype)
 end)  -- Runs for JavaScript, TypeScript, and Python files
+```
+
+### Excluding filetypes
+
+```lua
+-- Exclude specific filetypes from keymap
+_G.smart_save = keymux.k { "<leader>s", desc = "Smart save", ignore_filetype = { "markdown", "text" } }
+
+smart_save(function()
+    vim.cmd("write")
+end)  -- Runs for all filetypes except markdown and text
+
+-- Combine include and exclude filetypes
+_G.debug_key = keymux.k { 
+  "<leader>d", 
+  desc = "Debug key",
+  filetype = { "javascript", "typescript", "python", "rust" },
+  ignore_filetype = "test" 
+}
+
+debug_key(function()
+    print("Debugging in " .. vim.bo.filetype)
+end)  -- Runs for JS, TS, Python, Rust but NOT test files
 ```
 
 ### Pattern-specific handlers
