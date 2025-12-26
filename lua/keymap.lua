@@ -198,6 +198,16 @@ local function is_current_buffer_match_pattern(pattern, buf)
 	return true
 end
 
+local function invoke_only_passthrough(keymap, ctx)
+	local callbacks = vim.tbl_filter(function(cb)
+		return cb.name == "PASSTHROUGH"
+	end, keymap.callbacks)
+
+	for _, callback in ipairs(callbacks) do
+		callback.handler(ctx)
+	end
+end
+
 ---Detect duplicate keymaps for a given key and mode
 ---@param mode string
 ---@param key string
@@ -328,7 +338,6 @@ function M.invoke(keymap, ctx)
 	end
 
 	local buf = vim.api.nvim_get_current_buf()
-	local pattern_matched = (keymap.pattern and { is_current_buffer_match_pattern(keymap.pattern) } or { true })[1]
 	--TODO: Ensure __index?
 
 	local to_remove = {}
@@ -337,10 +346,9 @@ function M.invoke(keymap, ctx)
 		return a.priority > b.priority
 	end)
 
-	local callbacks = pattern_matched and keymap.callbacks
-		or vim.tbl_filter(function(cb)
-			return cb.name == "PASSTHROUGH"
-		end, keymap.callbacks)
+	local callbacks = vim.tbl_filter(function(cb)
+		return cb.name ~= "PASSTHROUGH"
+	end, keymap.callbacks)
 
 	for _, callback in ipairs(callbacks) do
 		if not callback.enabled then
@@ -355,7 +363,8 @@ function M.invoke(keymap, ctx)
 			goto continue
 		end
 
-		if callback.pattern and not is_current_buffer_match_pattern(callback.pattern, buf) then
+		local pattern = callback.pattern or keymap.pattern
+		if pattern and not is_current_buffer_match_pattern(pattern, buf) then
 			goto continue
 		end
 
@@ -600,6 +609,8 @@ function M.register(keymap_id)
 
 	local ctx = {}
 
+	local has_passthrough = keymap.passthrough ~= nil or keymap.passthrough ~= false
+
 	vim.keymap.set(mode, key, function()
 		local keymap_ids = g_registered_keymode[keymode_identifier]
 
@@ -616,7 +627,12 @@ function M.register(keymap_id)
 				M.invoke(the_keymap, ctx)
 			end
 
+
 			::continue::
+		end
+
+		if has_passthrough then
+			invoke_only_passthrough(keymap, ctx)
 		end
 	end, opts)
 end
