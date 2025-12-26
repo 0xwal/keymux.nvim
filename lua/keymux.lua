@@ -52,6 +52,8 @@ M.k = function(opts)
 
 	local keymap = keymap_module.create(opts, config)
 
+	keymap_module.register(keymap.id)
+
 	return function(handler, extra)
 		if not handler then
 			return {

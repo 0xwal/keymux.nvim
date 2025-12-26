@@ -1195,7 +1195,7 @@ describe("keymap", function()
 	-- #endregion
 
 	-- #region test case
-	it("#17-1 can register to specific #pattern when declaring", function()
+	it("#17-1 can register to specific #pattern when declaring #only", function()
 		local k = M.k({
 			"ff",
 			desc = "a keymap",
@@ -1377,7 +1377,6 @@ describe("keymap", function()
 		vim.api.nvim_buf_delete(target_buffer, { force = true })
 	end)
 
-
 	it("#17-6 pattern should match in anywhere of the filename when defining handlers", function()
 		local k = M.k({
 			"ff",
@@ -1430,7 +1429,6 @@ describe("keymap", function()
 			style = "minimal",
 		})
 
-
 		do -- check if it called
 			vim.api.nvim_buf_call(target_buffer, function()
 				vim.api.nvim_feedkeys("l", "x", true)
@@ -1443,10 +1441,42 @@ describe("keymap", function()
 		assert.are.same({ 1, 1 }, cursor)
 		vim.api.nvim_win_close(win, { force = true })
 
-
 		vim.api.nvim_buf_delete(target_buffer, { force = true })
 	end)
 
+	it("#17-9 when passing through, it should work even without handlers", function()
+		M.k({
+			"l",
+			desc = "a keymap",
+			passthrough = true,
+		})
+
+		local target_buffer = vim.api.nvim_create_buf(false, false)
+		vim.api.nvim_buf_set_name(target_buffer, "/path/xyz/config.txt")
+
+		vim.api.nvim_buf_set_lines(target_buffer, 0, -1, false, { "Hello, world!" })
+
+		local win = vim.api.nvim_open_win(target_buffer, true, {
+			relative = "editor",
+			width = 80,
+			height = 20,
+			col = 10,
+			row = 10,
+			style = "minimal",
+		})
+
+		do -- check if it called
+			vim.api.nvim_buf_call(target_buffer, function()
+				vim.api.nvim_feedkeys("l", "x", true)
+			end)
+		end
+
+		local cursor = vim.api.nvim_win_get_cursor(win)
+		assert.are.same({ 1, 1 }, cursor)
+		vim.api.nvim_win_close(win, { force = true })
+
+		vim.api.nvim_buf_delete(target_buffer, { force = true })
+	end)
 
 	-- #endregion
 
@@ -1945,7 +1975,7 @@ describe("keymap", function()
 			passthrough = true,
 			condition = function()
 				return true
-			end
+			end,
 		})
 
 		local cb1 = spy()
@@ -1973,7 +2003,6 @@ describe("keymap", function()
 			local cursor = vim.api.nvim_win_get_cursor(win)
 			assert.are.same({ 2, 0 }, cursor)
 			vim.api.nvim_win_close(win, { force = true })
-
 		end
 	end)
 

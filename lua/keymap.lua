@@ -133,15 +133,15 @@ local function matches_filetype(filetype_config, current_filetype)
 	if not filetype_config then
 		return true
 	end
-	
+
 	if type(filetype_config) == "string" then
 		return filetype_config == current_filetype
 	end
-	
+
 	if type(filetype_config) == "table" then
 		return vim.list_contains(filetype_config, current_filetype)
 	end
-	
+
 	return false
 end
 
@@ -152,15 +152,15 @@ local function should_ignore_filetype(ignore_filetype_config, current_filetype)
 	if not ignore_filetype_config then
 		return false
 	end
-	
+
 	if type(ignore_filetype_config) == "string" then
 		return ignore_filetype_config == current_filetype
 	end
-	
+
 	if type(ignore_filetype_config) == "table" then
 		return vim.list_contains(ignore_filetype_config, current_filetype)
 	end
-	
+
 	return false
 end
 
@@ -173,7 +173,7 @@ local function matches_filetype_with_ignore(filetype_config, ignore_filetype_con
 	if should_ignore_filetype(ignore_filetype_config, current_filetype) then
 		return false
 	end
-	
+
 	-- Then check if current filetype matches the allowed filetypes
 	return matches_filetype(filetype_config, current_filetype)
 end
@@ -287,6 +287,21 @@ function M.create(opts, config)
 
 	table.insert(g_registered_keymode[keymode_identifier], id)
 
+	if opts.passthrough then
+		local wrapper = type(opts.passthrough) == "function" and opts.passthrough
+			or function()
+				return opts.passthrough
+			end
+		M.add_handler(id, function()
+			if not wrapper() then
+				return
+			end
+			vim.api.nvim_feedkeys(key, "n", false)
+		end, {
+			name = "PASSTHROUGH",
+		})
+	end
+
 	return keymap
 end
 
@@ -313,6 +328,7 @@ function M.invoke(keymap, ctx)
 	end
 
 	local buf = vim.api.nvim_get_current_buf()
+	local pattern_matched = (keymap.pattern and { is_current_buffer_match_pattern(keymap.pattern) } or { true })[1]
 	--TODO: Ensure __index?
 
 	local to_remove = {}
@@ -321,7 +337,12 @@ function M.invoke(keymap, ctx)
 		return a.priority > b.priority
 	end)
 
-	for _, callback in ipairs(keymap.callbacks) do
+	local callbacks = pattern_matched and keymap.callbacks
+		or vim.tbl_filter(function(cb)
+			return cb.name == "PASSTHROUGH"
+		end, keymap.callbacks)
+
+	for _, callback in ipairs(callbacks) do
 		if not callback.enabled then
 			goto continue
 		end
@@ -567,11 +588,6 @@ function M.register(keymap_id)
 
 	keymap._registered = true
 
-	local key = keymap.key
-	local mode = keymap.mode
-
-	local keymode_identifier = make_identifier_for_keymode(key, mode)
-
 	if not vim.list_contains(g_registered_keymode[keymode_identifier], keymap.id) then
 		table.insert(g_registered_keymode[keymode_identifier], keymap.id)
 	end
@@ -589,35 +605,18 @@ function M.register(keymap_id)
 
 		local ft = vim.bo.filetype
 
-		local should_passthrough = false
 		for _, keymap_id in ipairs(keymap_ids) do
 			local the_keymap = M.resolve(keymap_id)
-			
+
 			if not matches_filetype_with_ignore(the_keymap.filetype, the_keymap.ignore_filetype, ft) then
 				goto continue
 			end
 
-			if the_keymap.pattern and not is_current_buffer_match_pattern(the_keymap.pattern) then
-				if the_keymap.passthrough then
-					vim.api.nvim_feedkeys(key, "n", false)
-				end
-				goto continue
-			end
-			
 			if can_run(the_keymap) then
 				M.invoke(the_keymap, ctx)
 			end
 
-			if the_keymap.passthrough then
-				local passthrough_result = the_keymap.passthrough
-				should_passthrough = (type(passthrough_result) ~= "function") or passthrough_result()
-			end
-			
 			::continue::
-		end
-
-		if should_passthrough then
-			vim.api.nvim_feedkeys(key, "n", false)
 		end
 	end, opts)
 end
