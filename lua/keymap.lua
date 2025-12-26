@@ -56,6 +56,8 @@
 ---@field buffer ?number
 ---@field priority ?number
 
+local keymap_set = vim.keymap.set
+
 ---@type table<string, KeyMap>
 local g_maps = {}
 
@@ -309,6 +311,7 @@ function M.create(opts, config)
 			vim.api.nvim_feedkeys(key, "n", false)
 		end, {
 			name = "PASSTHROUGH",
+			priority = -10,
 		})
 	end
 
@@ -448,6 +451,7 @@ function M.pack(keymap)
 				name = cb.name,
 				once = cb.once,
 				handler = cb.handler,
+				priority = cb.priority,
 			}
 		end, keymap.callbacks),
 	}
@@ -611,7 +615,7 @@ function M.register(keymap_id)
 
 	local has_passthrough = keymap.passthrough ~= nil or keymap.passthrough ~= false
 
-	vim.keymap.set(mode, key, function()
+	keymap_set(mode, key, function()
 		local keymap_ids = g_registered_keymode[keymode_identifier]
 
 		local ft = vim.bo.filetype
@@ -626,7 +630,6 @@ function M.register(keymap_id)
 			if can_run(the_keymap) then
 				M.invoke(the_keymap, ctx)
 			end
-
 
 			::continue::
 		end

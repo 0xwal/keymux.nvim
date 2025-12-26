@@ -1162,12 +1162,14 @@ describe("keymap", function()
 						handler = cb1,
 						buffer = 1,
 						enabled = true,
+						priority = 0,
 					},
 					{
 						name = "cb2",
 						handler = cb2,
 						filetype = "rust",
 						enabled = true,
+						priority = 0,
 					},
 				},
 			},
@@ -1181,12 +1183,14 @@ describe("keymap", function()
 						once = true,
 						enabled = true,
 						name = "nk1",
+						priority = 0,
 					},
 					{
 						handler = cb2,
 						desc = "the cb2",
 						enabled = true,
 						name = "nk2",
+						priority = 0,
 					},
 				},
 			},
@@ -1195,7 +1199,7 @@ describe("keymap", function()
 	-- #endregion
 
 	-- #region test case
-	it("#17-1 can register to specific #pattern when declaring #only", function()
+	it("#17-1 can register to specific #pattern when declaring", function()
 		local k = M.k({
 			"ff",
 			desc = "a keymap",
@@ -2036,7 +2040,6 @@ describe("keymap", function()
 			end,
 		})
 
-		local cb1 = spy()
 		local cb2 = spy()
 
 		k2(cb2)
@@ -2055,7 +2058,6 @@ describe("keymap", function()
 
 			vim.api.nvim_feedkeys("o", "x", false)
 
-			assert.spy(cb1).was_called(0)
 			assert.spy(cb2).was_called(1)
 
 			local cursor = vim.api.nvim_win_get_cursor(win)
