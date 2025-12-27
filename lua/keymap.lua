@@ -67,6 +67,9 @@ local g_maps_ids = {}
 ---@type table<string, string[]>
 local g_registered_keymode = {}
 
+---@type table<string, table[]> -- Storage for direct remaps created by mk
+local g_direct_remaps = {}
+
 local M = {}
 
 local idx = 0
@@ -405,7 +408,52 @@ function M.resolve_all_keymap_by_key(key)
 		end
 	end
 
+	if g_direct_remaps[key] then
+		for _, remap in ipairs(g_direct_remaps[key]) do
+			table.insert(out, remap)
+		end
+	end
+
 	return out
+end
+
+---@param key string
+---@param to string
+---@param desc string
+---@param mode string
+---@param options table
+function M.store_direct_remap(key, to, desc, mode, options)
+	if not g_direct_remaps[key] then
+		g_direct_remaps[key] = {}
+	end
+
+	if type(mode) == "table" then
+		for _, m in ipairs(mode) do
+			local remap = {
+				key = key,
+				desc = desc,
+				mode = m,
+				silent = options.silent,
+				noremap = options.noremap,
+				callbacks = {},
+				_direct_remap = true,
+				_to = to,
+			}
+			table.insert(g_direct_remaps[key], remap)
+		end
+	else
+		local remap = {
+			key = key,
+			desc = desc,
+			mode = mode,
+			silent = options.silent,
+			noremap = options.noremap,
+			callbacks = {},
+			_direct_remap = true,
+			_to = to,
+		}
+		table.insert(g_direct_remaps[key], remap)
+	end
 end
 
 ---@param buf number

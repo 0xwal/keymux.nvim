@@ -1992,6 +1992,134 @@ describe("keymap", function()
 	end)
 	-- #endregion
 
+	describe("mapping key to another key", function()
+		it("should create direct remap using vim.keymap.set", function()
+			local result = M.mk({
+				"k",
+				to = "gk",
+				desc = "move line up",
+				mode = "n",
+				silent = true,
+				noremap = false,
+			})
+
+			-- Should return nil
+			assert.is_nil(result)
+
+			-- Should call vim.keymap.set with correct parameters
+			assert.spy(vim.keymap.set).was_called(1)
+			assert.spy(vim.keymap.set).was_called_with(
+				"n",
+				"k",
+				"gk",
+				{
+					desc = "move line up",
+					silent = true,
+					noremap = false,
+				}
+			)
+		end)
+
+		it("should use default mode when not specified", function()
+			M.mk({
+				"j",
+				to = "gj",
+				desc = "move line down",
+			})
+
+			assert.spy(vim.keymap.set).was_called(1)
+			assert.spy(vim.keymap.set).was_called_with(
+				"n",
+				"j",
+				"gj",
+				{
+					desc = "move line down",
+				}
+			)
+		end)
+
+		it("should show mapping details when inspected", function()
+			M.mk({
+				"k",
+				to = "gk",
+				desc = "move line up",
+				mode = "n",
+				silent = true,
+			})
+
+			local keymaps = M.inspect("k")
+			
+			-- Should find the mapping
+			assert.equals(1, #keymaps)
+			local keymap = keymaps[1]
+			
+			-- Should have correct properties
+			assert.equals("k", keymap.key)
+			assert.equals("n", keymap.mode)
+			assert.equals("move line up", keymap.desc)
+			assert.equals(true, keymap.silent)
+			
+			-- Should not have callbacks since it's a direct remap
+			assert.equals(0, #keymap.callbacks)
+		end)
+
+		it("should handle multiple modes correctly", function()
+			M.mk({
+				"<C-w>",
+				to = "<C-w>w",
+				desc = "next window",
+				mode = { "n", "v" },
+				silent = true,
+			})
+
+			-- Should call vim.keymap.set once with table mode
+			assert.spy(vim.keymap.set).was_called(1)
+			assert.spy(vim.keymap.set).was_called_with(
+				{ "n", "v" },
+				"<C-w>",
+				"<C-w>w",
+				{
+					desc = "next window",
+					silent = true,
+				}
+			)
+
+			-- Should show both modes when inspected
+			local keymaps = M.inspect("<C-w>")
+			assert.equals(2, #keymaps)
+			
+			local modes = {}
+			for _, keymap in ipairs(keymaps) do
+				table.insert(modes, keymap.mode)
+			end
+			
+			assert.same_unordered({ "n", "v" }, modes)
+		end)
+
+		it("should validate required parameters", function()
+			assert.was_error(function()
+				M.mk({
+					"k",
+					desc = "missing 'to' parameter",
+				})
+			end, "opts.to must be a string")
+
+			assert.was_error(function()
+				M.mk({
+					to = "gk",
+					desc = "missing key parameter",
+				})
+			end, "opts[1] (key) must be a string")
+
+			assert.was_error(function()
+				M.mk({
+					"k",
+					to = "gk",
+				})
+			end, "opts.desc must be a string")
+		end)
+	end)
+
 	it("can invoke the #original keymap when invoked 1", function()
 		local k = M.k({
 			"l",

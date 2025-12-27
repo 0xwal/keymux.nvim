@@ -120,6 +120,28 @@ M.clear_keymap = function(key)
 	end
 end
 
+M.mk = function(opts)
+	assert(type(opts[1]) == "string", "opts[1] (key) must be a string")
+	assert(type(opts.to) == "string", "opts.to must be a string")
+	assert(type(opts.desc) == "string", "opts.desc must be a string")
+
+	local key = opts[1]
+	local to = opts.to
+	local desc = opts.desc
+	local mode = opts.mode or "n"
+
+	local options = {
+		desc = desc,
+		silent = opts.silent,
+		noremap = opts.noremap,
+	}
+
+	vim.keymap.set(mode, key, to, options)
+	keymap_module.store_direct_remap(key, to, desc, mode, options)
+
+	return nil
+end
+
 function M.setup(opts)
 	opts = opts or {}
 

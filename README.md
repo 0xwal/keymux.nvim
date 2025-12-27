@@ -68,6 +68,7 @@ For example, `<M-]>` triggers supermaven first; if the suggestion isn't good, pr
 ## Features
 
 - **Multiplex handlers**: One key can trigger multiple handlers
+- **Direct remaps**: Simple key-to-key remapping without handlers
 - **Conditional execution**: Filetype, pattern, buffer, priority, and condition-based handlers
 - **Context sharing**: Pass data between handlers
 - **Duplicate detection**: Configurable warnings for conflicting keymaps
@@ -157,6 +158,41 @@ require("keymux").setup({
 ```
 
 ## API
+
+### `keymux.mk(opts)`
+
+Creates a direct key remapping without handlers.
+
+#### Options (`DirectRemapOptionsArg`)
+
+| Field | Type | Optional | Description |
+|-------|------|----------|-------------|
+| `[1]` | `string` | No | The key sequence |
+| `to` | `string` | No | Target key sequence to remap to |
+| `desc` | `string` | No | Description for the remap |
+| `mode` | `string\|table` | Yes | Vim mode(s) (default: `"n"`) |
+| `silent` | `boolean` | Yes | Silent execution |
+| `noremap` | `boolean` | Yes | Don't remap (default: `false`) |
+
+#### Example
+
+```lua
+require("keymux").mk {
+  "k",
+  to = "gk",
+  desc = "Move line up",
+  mode = "n",
+  silent = true,
+  noremap = false,
+}
+
+require("keymux").mk {
+  "<C-w>",
+  to = "<C-w>w",
+  desc = "Next window",
+  mode = { "n", "v" },
+}
+```
 
 ### `keymux.detect_duplicates(mode, key)`
 

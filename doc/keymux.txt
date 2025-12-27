@@ -12,11 +12,14 @@ CONTENTS                                            *keymux-contents*
 1. Features     |keymux-features|
 2. API Reference                         |keymux-api|
     - keymux.k()                     |keymux.k()|
+    - keymux.mk()                    |keymux.mk()|
     - Handler Control                |keymux-handler-control|
-3. Options                                   |keymux-options|
+3. OPTIONS                                           *keymux-options*
     - KeyMap Options                     |keymux-keymap-options|
+    - Direct Remap Options            |keymux-direct-remap-options|
     - Callback Options                 |keymux-callback-options|
 4. Examples                        |keymux-examples|
+    - Direct remaps                     |keymux-examples-direct-remap|
     - Filetype-specific handlers      |keymux-examples-filetype|
     - Priority ordering                       |keymux-examples-priority|
     - Context sharing                  |keymux-examples-context|
@@ -45,6 +48,15 @@ keymux.k({opts})                                      *keymux.k()*
         
     Returns:
         (function) Handler function to add callbacks
+
+keymux.mk({opts})                                     *keymux.mk()*
+    Creates a direct key remapping without handlers.
+    
+    Parameters:
+        {opts} (table) Direct remap options table
+        
+    Returns:
+        (nil) Always returns nil
 
 keymux.detect_duplicates(mode, key)                 *keymux.detect_duplicates()*
     Detect duplicate keymaps for a given key and mode.
@@ -92,6 +104,14 @@ KeyMapOptionsArg ~
     [2] (function)        Wrapper function for all handlers
     condition (function)   Enable keymap when function returns true
     passthrough (boolean|function)  Execute original key behavior
+
+DirectRemapOptionsArg ~
+    [1] (string)         The key sequence
+    to (string)          Target key sequence to remap to
+    desc (string)         Description for the remap
+    mode (string|table)   Vim mode(s) (default: "n")
+    silent (boolean)      Silent execution
+    noremap (boolean)     Don't remap (default: false)
 
 CALLBACK OPTIONS                               *keymux-callback-options*
 
@@ -202,6 +222,25 @@ DYNAMIC CONDITIONS                             *keymux-examples-conditions*
     debug_toggle(function()
         print("Debug action executed")
     end)
+
+DIRECT REMAPS                                 *keymux-examples-direct-remap*
+
+>
+    require("keymux").mk {
+        "k",
+        to = "gk",
+        desc = "Move line up",
+        mode = "n",
+        silent = true,
+        noremap = false,
+    }
+    
+    require("keymux").mk {
+        "<C-w>",
+        to = "<C-w>w",
+        desc = "Next window",
+        mode = { "n", "v" },
+    }
 
 PASSTHROUGH KEYMAPS                             *keymux-examples-passthrough*
 
